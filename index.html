@@ -514,10 +514,7 @@ function render(){
   else html+=`<tr><td>None billed</td><td class="r" style="width:110px">$0.00</td></tr>`;
   html+=`</table>`;
   if(c.legRows.length && !c.avail) html+='<div class="note noprint" style="margin-top:0">Flight legs are loaded but NO AVAILABILITY WINDOW is set, so this invoice is missing the availability money. Select a trip profile (first flight of the day, mid-day standard, mid-day heavy, last flight) or enter manual clock times. The CSV cannot know your mission context; you pick it.</div>';
-  if(c.avail && c.avail.kind==="win" && state.profile && state.profile!=="manual"){
-    const prof=PROFILES[state.profile];
-    if(prof) html+='<div class="note" style="margin-top:0"><b>Availability charged per trip profile:</b> "'+state.profile.replace(/([A-Z])/g,' $1').trim()+'" — '+prof.desc+' This window covers all mission work outside the flight legs themselves, from our first crew action until the aircraft is released back to us.';
-  }
+
   if(state.ac.length){
     html+=`<div class="sec">Additional charges (approved, B-33 / B-37)</div><table><tr><th>Type</th><th>City / County</th><th class="r">Amount</th></tr>`;
     for(const a of state.ac) html+=`<tr><td>${a.type}</td><td>${a.city||""}</td><td class="r">${money(+a.amt||0)}</td></tr>`;
