@@ -281,6 +281,29 @@
 "use strict";
 const $ = id => document.getElementById(id);
 const state = { legs: [], ac: [], dates: {}, pickedDate: "", formLegs: [], formHaz: [], profile: null, wtPxConfirmed: false };
+
+// Supabase cloud sync
+let sbReady = false;
+async function initSupabase(){
+  try{
+    const mod = await import("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.38.0/+esm");
+    window.supabaseClient = mod.createClient("https://mffdxnxzvbcawvho.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1mZmR4bnh6dmJjYXd2aG8iLCJyb2xlIjoiYW5vbiIsImlhdCI6MTY5NzAzNDAwMCwiZXhwIjoxNzI4NTcwMDAwfQ.FJ9Ks7xHzNv4z3L8qZ5wK2m9X8pL5bQ3nR6vT2sY1A");
+    sbReady = true;
+    console.log("Supabase ready");
+  }catch(e){ console.log("Supabase init error:", e.message); }
+}
+initSupabase();
+
+async function syncToCloud(){
+  if(!sbReady || !window.supabaseClient) return;
+  try{
+    const list = qLoad();
+    for(const job of list){
+      await window.supabaseClient.from("fs_flight_queue").upsert({ id: job.id, job_data: job, status: job.status, updated_at: new Date().toISOString() });
+    }
+    console.log("Queue synced to Supabase");
+  }catch(e){ console.log("Cloud sync error:", e.message); }
+}
 const TAIL = "N265KP";
 const EMAIL_TO = "TNF-Aviation@usda.gov";
 const EMAIL_CC = "accounting@flyalaskaseaplanes.com,charter@flyalaskaseaplanes.com";
@@ -578,7 +601,7 @@ function snapshot(status){
     updated:new Date().toISOString(), fields:f, legs:state.legs, formLegs:state.formLegs, formHaz:state.formHaz,
     pickedDate:state.pickedDate, ac:state.ac, grand:c.grand, route:invMeta(c).route, profile:state.profile, wtPxConfirmed:state.wtPxConfirmed };
 }
-function saveCurrent(status){ const j=snapshot(status||((qGet(currentJobId)||{}).status)||"pending"); currentJobId=j.id; qUpsert(j); }
+function saveCurrent(status){ const j=snapshot(status||((qGet(currentJobId)||{}).status)||"pending"); currentJobId=j.id; qUpsert(j); syncToCloud(); }
 function scheduleSave(){ if(!currentJobId) return; clearTimeout(saveTimer); saveTimer=setTimeout(()=>saveCurrent(), 900); }
 
 function restoreJob(id){
