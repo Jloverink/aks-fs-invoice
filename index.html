@@ -164,8 +164,6 @@
     <div class="muted" style="margin-top:6px">Uncheck any leg that was not FS work (e.g. scheduled runs on the same day).
       Engine start then cancel: add a manual leg 6 minutes long and note it below.</div>
     <div id="gapInfo" class="muted" style="margin-top:4px;font-weight:bold"></div>
-    <button class="btn ghost" id="saveDraft" type="button" style="margin-top:8px">Save now (auto-saving on edits)</button>
-    <button class="btn" id="markComplete" type="button" style="margin-top:8px; background:#E8F5E9; color:#2E7D32; border:1px solid #4CAF50">Mark as COMPLETED</button>
   </div>
 
   <div class="panel" style="margin-top:16px">
@@ -267,6 +265,9 @@
   <div class="panel" style="margin-top:16px">
     <div id="msgs"></div>
     <div id="tfTotals" style="margin:0 0 10px;font:700 15px Arial;color:var(--navy)"></div>
+    <button class="btn ghost" id="saveDraft" type="button">Save to queue</button>
+    <button class="btn ok" id="markComplete" type="button" style="margin-left:8px">Mark COMPLETED</button>
+    <span style="margin-left:auto"></span>
     <button class="btn gold" id="printBtn" type="button">Print / save invoice PDF</button>
     <button class="btn" id="emailBtn" type="button" style="margin-left:10px">Email invoice (Gmail)</button>
     <span class="muted" style="margin-left:10px">Print first, then Email opens Gmail addressed to the FS with accounting and charters cc'd; attach the saved PDF.</span>
