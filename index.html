@@ -524,8 +524,12 @@ function render(){
   if(wt||px){
     const confirmed=state.wtPxConfirmed?" <span style='color:var(--ok)'>✓ confirmed</span>":"";
     const pxCount=(+px||0)+1; // passengers + pilot
-    html+=`<div class="sec">Trip summary${confirmed}</div><table><tr>${wt?'<tr><td><b>Cargo weight</b></td><td class="r"><b>'+wt+' lbs</b></td></tr>':""}
-  ${px||px==='0'?'<tr><td><b>Passengers</b></td><td class="r"><b>'+px+'</b></td></tr>':""}<tr><td><b>Pilot</b></td><td class="r"><b>'+pilot+'</b></td></tr><tr><td><b>Persons on board</b></td><td class="r"><b>'+pxCount+'</b></td></tr></table>`;
+    html+=`<div class="sec">Trip summary${confirmed}</div><table>`
+      +(wt?`<tr><td><b>Cargo weight</b></td><td class="r"><b>${wt} lbs</b></td></tr>`:"")
+      +(px||px==='0'?`<tr><td><b>Passengers</b></td><td class="r"><b>${px}</b></td></tr>`:"")
+      +`<tr><td><b>Pilot</b></td><td class="r"><b>${pilot}</b></td></tr>`
+      +`<tr><td><b>Persons on board</b></td><td class="r"><b>${pxCount}</b></td></tr>`
+      +`</table>`;
   }
   const beforeTax=Math.round((c.fPre+(c.avail?c.avail.amt:0)+c.acAmt)*100)/100;
   html+=`<div class="sec">Totals</div>
@@ -541,8 +545,7 @@ function render(){
   ${c.ronAmt?`<tr><td>RON</td><td>Overnight charges</td><td class="r">${money(c.ronAmt)}</td></tr>`:""}
   ${c.miscAmt?`<tr><td>Misc</td><td>Other approved charges</td><td class="r">${money(c.miscAmt)}</td></tr>`:""}
   <tr class="totals grand"><td colspan="2">122 TOTAL ALL CHARGES</td><td class="r">${money(c.grand)}</td></tr></table>
-  <div class="note noprint" style="margin-top:0">Key new work under contract 1202SA25T9402, not legacy 1202SA21G5700. Column mapping is our best read of the IBS invoice screen; confirm with the COR whether availability dollars key under AV or ES before the first entry on the new contract.</div>
-  <div class="note noprint">This form mirrors IBS flight use invoice entries: Clock-C flight legs at actual times (no rounding), daily availability, and additional charge line items. Attach: Flight Request form, FRAT, hazmat manifest if applicable, Spidertracks summary. Rate line per order; flight rate subject to C-20 fuel EPA.</div>`;
+  <div class="note noprint" style="margin-top:0">Key new work under contract 1202SA25T9402, not legacy 1202SA21G5700. Column mapping is our best read of the IBS invoice screen; confirm with the COR whether availability dollars key under AV or ES before the first entry on the new contract. This form mirrors IBS flight use invoice entries: Clock-C flight legs at actual times (no rounding), daily availability, and additional charge line items. Attach: Flight Request form, FRAT, hazmat manifest if applicable, Spidertracks summary. Rate line per order; flight rate subject to C-20 fuel EPA.</div>`;
   $("invoice").innerHTML=html;
   $("gapInfo").textContent=c.gaps.length?("Ground time between legs: "+c.gaps.map(g=>g.at+" "+g.min+" min").join(", ")+" (paid by the availability window)"):"";
   const preTax=Math.round(c.fRate/1.075*100)/100;
