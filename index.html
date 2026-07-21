@@ -751,10 +751,22 @@ const saveDraftBtn=$("saveDraft");
 if(saveDraftBtn){
   saveDraftBtn.addEventListener("click",e=>{
     e.preventDefault();
-    console.log("Save Draft clicked");
-    saveCurrent("pending");
-    msg("Saved to queue as PENDING. Check the queue at the top to see it.", false);
+    console.log("=== Save Draft Button Clicked ===");
+    try{
+      const before = qLoad().length;
+      console.log("Queue before:", before, "flights");
+      saveCurrent("pending");
+      const after = qLoad().length;
+      console.log("Queue after:", after, "flights");
+      msg("✓ Saved to PENDING queue", false);
+    }catch(err){
+      console.error("ERROR:", err.message);
+      alert("Save failed: " + err.message);
+    }
   });
+  console.log("Save draft button ready");
+} else {
+  console.error("ERROR: saveDraft button not found");
 }
 $("qNew").onclick=()=>{ if(confirm("Start a new blank invoice? The current one stays saved in the queue.")) location.reload(); };
 $("qExport").onclick=()=>{
