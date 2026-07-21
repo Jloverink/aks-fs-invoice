@@ -1,1 +1,769 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AKS Forest Service Invoice Builder</title>
+<style>
+  :root{
+    --navy:#14263E; --navy2:#1E3A5C; --gold:#E8A33D; --paper:#FAFAF7;
+    --ink:#1A1A1A; --slate:#5B6B7C; --line:#D8DCE1; --alert:#B3261E; --ok:#2E6B4F;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:#EEF1F4;color:var(--ink);font:14px/1.45 Arial,Helvetica,sans-serif}
+  .bar{background:var(--navy);color:#fff;padding:14px 22px;display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+  .bar h1{margin:0;font:700 21px/1 "Arial Narrow",Arial,sans-serif;letter-spacing:.08em;text-transform:uppercase}
+  .bar h1 span{color:var(--gold)}
+  .bar small{color:#B9C4D2;letter-spacing:.03em}
+  .wrap{max-width:1180px;margin:18px auto;padding:0 16px;display:grid;grid-template-columns:1fr;gap:18px}
+  @media(min-width:1020px){.wrap{grid-template-columns:460px 1fr}}
+  .panel{background:#fff;border:1px solid var(--line);border-radius:6px;padding:16px}
+  .panel h2{margin:0 0 10px;font:700 13px/1 "Arial Narrow",Arial,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--navy)}
+  .panel h2 .tick{color:var(--gold)}
+  label{display:block;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--slate);margin:8px 0 3px}
+  input[type=text],input[type=date],input[type=time],input[type=number],select{
+    width:100%;padding:7px 8px;border:1px solid var(--line);border-radius:4px;font:14px Arial;background:#fff}
+  input:focus,select:focus{outline:2px solid var(--gold);outline-offset:0;border-color:var(--gold)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .grid4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px}
+  .drop{border:2px dashed var(--navy2);border-radius:6px;padding:18px;text-align:center;color:var(--slate);cursor:pointer;background:var(--paper)}
+  .drop.on{border-color:var(--gold);background:#FFF8EC}
+  .drop b{color:var(--navy)}
+  .rail{display:flex;align-items:center;gap:0;margin:12px 0 4px}
+  .rail .node{font:700 10px/1 "Arial Narrow",Arial;letter-spacing:.1em;text-transform:uppercase;color:var(--slate);
+    padding:5px 8px;border:1px solid var(--line);border-radius:12px;background:#fff;white-space:nowrap}
+  .rail .node.done{border-color:var(--gold);color:var(--navy);background:#FFF4DE}
+  .rail .seg{flex:1;height:2px;background:var(--line);min-width:8px}
+  table.legs{width:100%;border-collapse:collapse;margin-top:8px;font-size:13px}
+  table.legs th{font:700 10px/1 "Arial Narrow",Arial;letter-spacing:.1em;text-transform:uppercase;color:var(--slate);
+    text-align:left;padding:4px 5px;border-bottom:2px solid var(--navy)}
+  table.legs td{padding:4px 5px;border-bottom:1px solid var(--line)}
+  table.legs input[type=text]{padding:4px 5px;font-size:13px}
+  .tiny{width:64px}
+  .btn{display:inline-block;background:var(--navy);color:#fff;border:0;border-radius:4px;padding:9px 16px;
+    font:700 13px "Arial Narrow",Arial;letter-spacing:.08em;text-transform:uppercase;cursor:pointer}
+  .btn:hover{background:var(--navy2)}
+  .btn.gold{background:var(--gold);color:var(--navy)}
+  .btn.ghost{background:#fff;color:var(--navy);border:1px solid var(--navy)}
+  .warn{background:#FBEAE8;border:1px solid var(--alert);color:var(--alert);border-radius:4px;padding:8px 10px;margin:8px 0;font-size:13px}
+  .good{background:#E9F2EC;border:1px solid var(--ok);color:var(--ok);border-radius:4px;padding:8px 10px;margin:8px 0;font-size:13px}
+  .muted{color:var(--slate);font-size:12px}
+  .addrow{margin-top:6px}
+  /* ---------- invoice ---------- */
+  #invoiceWrap{background:#fff;border:1px solid var(--line);border-radius:6px;padding:0;overflow:auto}
+  #invoice{width:8.3in;min-height:10in;margin:0 auto;padding:.55in .6in;font:13px/1.4 Arial;color:#000;background:#fff}
+  #invoice .head{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid var(--navy);padding-bottom:8px}
+  #invoice .co{font:800 24px/1 "Arial Narrow",Arial;letter-spacing:.06em;color:var(--navy)}
+  #invoice .co small{display:block;font:400 10px Arial;letter-spacing:.05em;color:#444;margin-top:3px}
+  #invoice .inv-meta{text-align:right;font-size:12px;white-space:nowrap}
+  #invoice .banner{background:var(--navy);color:#fff;text-align:center;font:700 11px "Arial Narrow";letter-spacing:.18em;
+    text-transform:uppercase;padding:4px;margin:10px 0}
+  #invoice table{width:100%;border-collapse:collapse;font-size:12px;margin:6px 0 12px}
+  #invoice th{background:#EDF0F3;border:1px solid #999;padding:4px 6px;font:700 10px "Arial Narrow";letter-spacing:.08em;text-transform:uppercase;text-align:left}
+  #invoice td{border:1px solid #999;padding:4px 6px}
+  #invoice .r{text-align:right}
+  #invoice .sec{font:700 12px "Arial Narrow";letter-spacing:.12em;text-transform:uppercase;color:var(--navy);margin:12px 0 2px;border-bottom:1px solid var(--navy)}
+  #invoice .totals td{font-weight:bold}
+  #invoice .grand{background:#EDF0F3}
+  #invoice .foot{display:flex;justify-content:space-between;gap:24px;margin-top:14px;font-size:11px}
+  #invoice .sig{margin-top:26px;display:flex;gap:30px;font-size:11px}
+  #invoice .sig div{flex:1;border-top:1px solid #000;padding-top:3px}
+  #invoice .note{font-size:9.5px;color:#333;margin-top:10px;font-style:italic}
+  @media print{
+    body.printing > .bar, body.printing > .wrap{display:none !important}
+    .noprint{display:none !important}
+    #invoice{position:static;width:100%;min-height:0;padding:.25in .4in;box-shadow:none}
+  }
+  @page{margin:0.4in}
+  .noprint{background:#FFFBEA;border:1px dashed #C9A227;padding:4px 6px}
+  .noprint::before{content:"SCREEN ONLY, NOT PRINTED: ";font-weight:bold;color:#8A5A00}
+  .attn{outline:2px solid var(--gold) !important;background:#FFF8EC !important}
+  .qrow{display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid var(--line);border-radius:4px;margin-top:6px;font-size:13px;background:#fff}
+  .qrow b{color:var(--navy)}
+  .chip{font:700 10px "Arial Narrow",Arial;letter-spacing:.08em;padding:3px 8px;border-radius:10px}
+  .chip.pending{background:#FFF4DE;color:#8A5A00;border:1px solid var(--gold)}
+  .chip.completed{background:#E9F2EC;color:var(--ok);border:1px solid var(--ok)}
+  .qbtn{padding:3px 9px;font-size:11px}
+</style>
+</head>
+<body>
+<div class="bar">
+  <h1>Alaska Seaplanes <span>&#9992;</span> Forest Service Invoice Builder</h1>
+  <small>Contract 1202SA25T9402 &middot; N265KP &middot; drop the Spidertracks summary, type the order, print</small>
+</div>
 
+<div class="wrap">
+<div><!-- LEFT: worksheet -->
+
+  <div class="panel">
+    <h2><span class="tick">&#9992;&nbsp;</span> Pending FS flights <span class="muted" style="font-weight:normal;text-transform:none;letter-spacing:0">(drop a request PDF below to add one; saved on this computer)</span></h2>
+    <div id="queueList" class="muted">No saved flights yet.</div>
+    <div style="margin-top:8px">
+      <button class="btn ghost qbtn" id="qNew" type="button">New blank invoice</button>
+      <button class="btn ghost qbtn" id="qExport" type="button">Export queue</button>
+      <button class="btn ghost qbtn" id="qImport" type="button">Import queue</button>
+      <input type="file" id="qImportFile" accept=".json" style="display:none">
+    </div>
+  </div>
+
+  <div class="panel" style="margin-top:16px">
+    <details>
+      <summary style="cursor:pointer"><b style="color:var(--navy);font:700 13px 'Arial Narrow',Arial,sans-serif;letter-spacing:.12em;text-transform:uppercase">How the billing works (tap to expand)</b></summary>
+      <div style="margin-top:8px;font-size:13px">
+        <p style="margin:4px 0"><b>Two meters, added together.</b> Availability = renting the committed plane (daily rate; covers ALL loading, preflight, waiting, unloading). Flight = using it (block-to-block clock minutes). Both run at the same time; flying does not pause the window. No tax is ever added.</p>
+        <table class="legs" style="margin:6px 0">
+          <tr><th>Time</th><th>Contract name</th><th>What it does</th><th>Source</th></tr>
+          <tr><td><b>FS clock ON</b></td><td>Aircraft accepted (B-26c)</td><td>Availability starts, before loading</td><td>Dispatch log</td></tr>
+          <tr><td><b>Block out</b></td><td>Starts its roll (B-27)</td><td>Flight starts, per leg</td><td>Spidertracks Blocks Off</td></tr>
+          <tr><td>Takeoff / Landing</td><td>Air time</td><td>Feeds the Hobbs; maintenance only, never billed</td><td>Panel meter</td></tr>
+          <tr><td><b>Block in</b></td><td>Taxied to parking, stopped</td><td>Flight stops, per leg</td><td>Spidertracks Blocks On</td></tr>
+          <tr><td><b>FS clock OFF</b></td><td>Aircraft released</td><td>Availability stops, after unload</td><td>Dispatch log</td></tr>
+        </table>
+        <p style="margin:4px 0"><b>The 15 minutes is the meter's tick size, not a task box.</b> DA $6,216 / 14-hr day = $444.00/hr = exactly $111.00 per 15-min block (that is the divisible-by-56 rule working). IBS keys it as a full AV day $6,216 minus NA hours @ $444; same math, same net. A 12-minute load can't be "lost": the meter was already running when it happened. Temporary release per the TO: no availability paid, we fly our own work, back within 24 hrs of the COR's call.</p>
+        <p style="margin:4px 0"><b>Weather cancel:</b> bill the window (or the ordered day), zero flight. <b>Engine started then cancelled, or ordered ramp reposition:</b> flat 0.1 hr, entered as a 6-minute leg with the reason. That is the only 6-minute rule anywhere; flight time itself is exact, never rounded, never Hobbs.</p>
+        <p style="margin:4px 0"><b>Never:</b> bill Hobbs; bill loading or unloading as line items; add FET; bill availability over time the plane flew AKS commercial work; bill anything without an order.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="panel" style="margin-top:16px">
+    <h2><span class="tick">1&nbsp;&middot;</span> Flight times from Spidertracks</h2>
+    <div class="drop" id="drop" tabindex="0">
+      <b>Drop the Spidertracks summary CSV and/or the Flight Request PDF here</b><br>
+      <span class="muted">Both at once works. The CSV fills flight times; the request form PDF fills requester, job code, override, unit, and the route names.</span>
+      <input type="file" id="file" accept=".csv,.pdf" multiple style="display:none">
+    </div>
+    <details style="margin-top:8px"><summary class="muted"><b>How to get the CSV from Spidertracks</b> (30 seconds)</summary>
+      <ol class="muted" style="margin:6px 0 4px 18px;padding:0">
+        <li>Sign in at go.spidertracks.com and open the flight <b>History</b> page.</li>
+        <li>Filter to <b>N265KP</b> and the flight date (a range covering the day works too).</li>
+        <li>Click <b>Export</b> and choose the <b>Summary CSV</b>. The file downloads as <b>exportedTracksSummary&hellip;.csv</b>. That's the one this tool reads.</li>
+        <li>Do NOT use the full tracks CSV (thousands of GPS points) or the KML (map file). Wrong exports are rejected with a message, nothing breaks.</li>
+        <li>Drag the file into the box above.</li>
+      </ol>
+
+      <div class="muted" style="margin:8px 0;padding:8px;border:1px dashed var(--line)">Video walkthrough lives in dispatch channel and local copy; written steps above cover it.</div>
+      <div class="muted">Exact menu names may differ slightly with Spidertracks updates; the target is always the export whose filename starts with exportedTracksSummary.</div>
+    </details>
+    <div id="dateRow" style="display:none">
+      <label>Flight date found in file</label>
+      <select id="datePick"></select>
+    </div>
+    <table class="legs" id="legTbl" style="display:none">
+      <thead><tr><th>Bill</th><th>From</th><th>To</th><th>Out</th><th>In</th><th>Min</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <button class="btn ghost addrow" id="addLeg" type="button">+ Add leg manually</button>
+    <div class="muted" style="margin-top:6px">Uncheck any leg that was not FS work (e.g. scheduled runs on the same day).
+      Engine start then cancel: add a manual leg 6 minutes long and note it below.</div>
+    <div id="gapInfo" class="muted" style="margin-top:4px;font-weight:bold"></div>
+  </div>
+
+  <div class="panel" style="margin-top:16px">
+    <h2><span class="tick">2&nbsp;&middot;</span> The order</h2>
+    <div class="grid2">
+      <div><label>FS request ref (requester + date)</label><input type="text" id="orderNo" placeholder="e.g. Chamberlain form 7/10"></div>
+      <div><label>Charter ID #</label><input type="text" id="invNo" placeholder="Takeflite charter #"></div>
+      <div><label>Pilot</label>
+        <select id="pilot"><option>Hunter Sinclair</option><option>Seth Downs</option></select></div>
+      <div><label>Cargo weight (lbs)</label><input type="number" id="weight" placeholder="e.g. 850" step="1"></div>
+      <div><label>Passengers (not including pilot)</label><input type="number" id="pax" placeholder="e.g. 1" step="1" min="0"></div>
+    </div>
+    <details style="margin-top:8px"><summary class="muted">FS accounting codes (optional, from their form; prints only if filled)</summary>
+      <div class="grid2" style="margin-top:6px">
+        <div><label>Job code</label><input type="text" id="jobCode" placeholder="e.g. FDDS3624"></div>
+        <div><label>Override</label><input type="text" id="override" placeholder="e.g. 1005"></div>
+        <div><label>Unit / District</label><input type="text" id="unit" placeholder="e.g. 31 Sitka RD"></div>
+      </div>
+    </details>
+    <div id="formHint" style="margin-top:8px"></div>
+    <div style="margin-top:8px">
+      <button class="btn ghost" id="confirmWtPx" type="button">Confirm weight & passengers</button>
+      <span class="muted" style="margin-left:8px; font-size:11px">Review the form values above and adjust before confirming</span>
+    </div>
+  </div>
+
+  <div class="panel" style="margin-top:16px">
+    <h2><span class="tick">3&nbsp;&middot;</span> Availability window</h2>
+    <div class="rail" id="rail">
+      <span class="node" id="nAcc">FS clock on</span><span class="seg"></span>
+      <span class="node" id="nLegs">Flight legs</span><span class="seg"></span>
+      <span class="node" id="nRel">FS clock off</span>
+    </div>
+    <div class="grid2">
+      <div><label>FS clock on (plane committed to their order)</label><input type="time" id="accT"></div>
+      <div><label>FS clock off (released back to us)</label><input type="time" id="relT"></div>
+    </div>
+    <div class="muted" style="margin-top:6px">Clock ON is not block-out: it starts earlier, when we begin working their order (preflight and loading are paid time). Clock OFF is when the job is done and the plane is ours again.</div>
+    <div style="margin-top:8px"><label>Trip profile (the tool will set the pre/post times)</label>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn ghost" id="btnFirst" type="button" data-profile="first">First flight of the day</button>
+      <button class="btn ghost" id="btnMidStd" type="button" data-profile="midStandard">Mid-day, standard load</button>
+      <button class="btn ghost" id="btnMidHvy" type="button" data-profile="midHeavy">Mid-day, 500+ lbs</button>
+      <button class="btn ghost" id="btnLast" type="button" data-profile="last">Last flight (landing &ge; 17:00)</button>
+      <button class="btn ghost" id="btnManual" type="button" data-profile="manual">Manual times</button>
+    </div>
+    </div>
+    <div style="margin-top:8px" id="profileMsg" class="muted"></div>
+    <div style="margin-top:8px"><label>Clock on / off (or let auto-fill compute from profile + block times)</label>
+    <div class="grid2">
+      <div><input type="time" id="accT" placeholder="auto"></div>
+      <div><input type="time" id="relT" placeholder="auto"></div>
+    </div></div>
+    <button class="btn ghost" id="suggestWin" type="button" style="margin-top:8px;display:none">Compute window</button>
+    <details style="margin-top:8px"><summary class="muted"><b>Availability window parameters</b> (verbal agreement with the COR; why each allowance is what it is)</summary>
+      <div style="margin-top:8px;font-size:13px">
+        <p style="margin:4px 0"><b>Governing principle: the same hour of work is never billed to two customers.</b> The full daily pre-flight or post-flight belongs to whichever mission it is actually for. If the FS trip is the plane's first or last flight of the day, that work is theirs; mid-day, they owe only what their mission adds.</p>
+        <table class="legs" style="margin:6px 0">
+          <tr><th>Window OPENS before first block-out</th><th>Min</th><th>Covers</th></tr>
+          <tr><td>Aircraft's FIRST flight of the day</td><td><b>60</b></td><td>Full preflight, weather, FRAT, W&amp;B, seat config, loading, pax walk-out</td></tr>
+          <tr><td>Mid-day, under 500 lbs, no seat changes</td><td><b>30</b></td><td>Mission W&amp;B, briefing, loading, passengers</td></tr>
+          <tr><td>Mid-day, 500+ lbs, bulky, or seat reconfiguration</td><td><b>45</b></td><td>Above plus cargo handling and reconfiguration</td></tr>
+        </table>
+        <table class="legs" style="margin:6px 0">
+          <tr><th>Window CLOSES after last block-in</th><th>Min</th><th>Covers</th></tr>
+          <tr><td>Aircraft's LAST flight of the day</td><td><b>45</b></td><td>Unload, post-flight, clean, reconfigure, fuel</td></tr>
+          <tr><td>More flying after, standard unload</td><td><b>15</b></td><td>Passengers in, bags and cargo off</td></tr>
+          <tr><td>More flying after, heavy unload (500 lbs or more) or seat reinstall</td><td><b>30</b></td><td>Above plus cargo handling and reconfiguration</td></tr>
+        </table>
+        <p style="margin:4px 0"><b>Rules:</b> any started 15-minute block bills as a full block (30 min bills 30; 31 or 32 bills 45; 46 bills 60). Actual logged times govern when the mission runs longer. Ground time at remote stops is already inside the window. A window stated on the order or by the COR overrides these defaults. Outside ordered windows the aircraft returns to our schedule and no availability is billed.</p>
+        <p style="margin:4px 0"><b>Worked examples:</b> mid-day heavy mission (aircraft flew commercial that morning, 500+ lbs with seat work, nothing after): 45 pre + 45 post; blocks 12:24 to 14:34 give a window of 11:39 to 15:19 = 15 blocks = $1,665.00. First flight of the day with commercial flying after (heavy retrieval): 60 pre + 30 post; blocks 10:26 to 11:42 give 09:26 to 12:12 = 12 blocks = $1,332.00.</p>
+      </div>
+    </details>
+    <label style="margin-top:10px"><input type="checkbox" id="fullDay" style="width:auto;margin-right:6px">
+      FS ordered the full 14-hour day (flat $6,216)</label>
+    <div class="grid2" style="margin-top:8px">
+      <div><label>Rates (TO 1202SA26K9402, per COR + FS-6500-122)</label>
+        <div style="padding:7px 8px;border:1px solid var(--line);border-radius:4px;background:var(--paper);font-size:13px"><b>$2,793.00</b>/flight hr &middot; DA <b>$6,216</b>/14-hr day = <b>$444.00</b>/hr = <b>$111.00</b> per 15-min block</div></div>
+      <div><label>Weather / cancel note (optional)</label><input type="text" id="wxNote" placeholder="e.g. FS cancelled 10:40, wx"></div>
+    </div>
+    <details style="margin-top:8px"><summary class="muted">Edit rates (after a new mod only)</summary>
+      <div class="grid2" style="margin-top:6px">
+        <div><label>Flight rate /hr (tax-incl)</label><input type="number" id="rFT" value="2793" step="0.01"></div>
+        <div><label>Daily availability /14-hr day</label><input type="number" id="rDA" value="6216" step="0.01"></div>
+      </div>
+    </details>
+  </div>
+
+  <div class="panel" style="margin-top:16px">
+    <h2><span class="tick">4&nbsp;&middot;</span> Additional charges (approved only)</h2>
+    <table class="legs" id="acTbl">
+      <thead><tr><th>Type</th><th>City / County</th><th class="r">Amount</th><th></th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <button class="btn ghost addrow" id="addAC" type="button">+ Add charge</button>
+    <div class="muted" style="margin-top:6px">Lodging = receipt amount up to the FTR cap for that city (must name city/county or FS cuts the claim, B-33). Meals = published M&amp;IE per diem per person per overnight, no receipts. Fees/tie-down/hangar = actual with receipt, CO-approved only (B-37). Rates: gsa.gov per diem lookup.</div>
+  </div>
+
+  <div class="panel" style="margin-top:16px">
+    <div id="msgs"></div>
+    <div id="tfTotals" style="margin:0 0 10px;font:700 15px Arial;color:var(--navy)"></div>
+    <button class="btn gold" id="printBtn" type="button">Print / save invoice PDF</button>
+    <button class="btn" id="emailBtn" type="button" style="margin-left:10px">Email invoice (Gmail)</button>
+    <span class="muted" style="margin-left:10px">Print first, then Email opens Gmail addressed to the FS with accounting and charters cc'd; attach the saved PDF.</span>
+  </div>
+
+</div>
+<div><!-- RIGHT: live invoice -->
+  <div id="invoiceWrap"><div id="invoice"></div></div>
+</div>
+</div>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const state = { legs: [], ac: [], dates: {}, pickedDate: "", formLegs: [], formHaz: [], profile: null, wtPxConfirmed: false };
+const TAIL = "N265KP";
+const EMAIL_TO = "TNF-Aviation@usda.gov";
+const EMAIL_CC = "accounting@flyalaskaseaplanes.com,charter@flyalaskaseaplanes.com";
+const CODE_MAP = { PAJN:"Juneau", PASI:"Sitka", PAHN:"Haines", PAGY:"Skagway", PAGS:"Gustavus", PAOH:"Hoonah", MISC:"" };
+const PROFILES={first:{pre:60,post:45,desc:"Aircraft's first flight of the day: full preflight, weather, FRAT, W&B, seat config, loading, unload post-flight."},
+  midStandard:{pre:30,post:15,desc:"Mid-day, standard load: quick W&B, briefing, pax boarding; standard unload."},
+  midHeavy:{pre:45,post:30,desc:"Mid-day, 500+ lbs or bulky cargo: above plus cargo handling and seat reconfiguration."},
+  last:{pre:30,post:45,desc:"Last flight of the day (landing 17:00 or later): quick pre-flight, then full post with cleanup and fuel."},
+  manual:{pre:0,post:0,desc:"Manual entry: you set the exact clock-on and clock-off times."}};
+
+/* ---------- CSV parsing ---------- */
+function parseCSV(text){
+  const rows=[]; let row=[], cur="", q=false;
+  for(let i=0;i<text.length;i++){
+    const c=text[i];
+    if(q){ if(c==='"'){ if(text[i+1]==='"'){cur+='"';i++;} else q=false; } else cur+=c; }
+    else if(c==='"') q=true;
+    else if(c===','){ row.push(cur); cur=""; }
+    else if(c==='\n'||c==='\r'){ if(cur!==""||row.length){row.push(cur);rows.push(row);row=[];cur="";} if(c==='\r'&&text[i+1]==='\n')i++; }
+    else cur+=c;
+  }
+  if(cur!==""||row.length){row.push(cur);rows.push(row);}
+  return rows.filter(r=>r.length>1);
+}
+function loadCSV(text){
+  const rows=parseCSV(text);
+  const hdr=rows[0].map(h=>h.trim());
+  const ix=n=>hdr.findIndex(h=>h.toLowerCase().startsWith(n));
+  const iLocal=ix("start time(local"), iOff=hdr.indexOf("Blocks Off"), iOn=hdr.indexOf("Blocks On"),
+        iFrom=hdr.indexOf("From"), iTo=hdr.indexOf("To");
+  if(iLocal<0||iOff<0||iOn<0){ msg("That file doesn't look like a Spidertracks summary export. Expected columns: Start Time(Local), Blocks Off, Blocks On.", true); return; }
+  state.dates={};
+  for(const r of rows.slice(1)){
+    const dt=(r[iLocal]||"").trim(); if(!dt) continue;
+    const date=dt.split(" ")[0];
+    const off=(r[iOff]||"").trim(), on=(r[iOn]||"").trim();
+    if(!off||!on) continue;
+    (state.dates[date]=state.dates[date]||[]).push({
+      from: CODE_MAP[(r[iFrom]||"").trim()] ?? (r[iFrom]||"").trim(),
+      to:   CODE_MAP[(r[iTo]||"").trim()]   ?? (r[iTo]||"").trim(),
+      out: off, inn: on, bill:true
+    });
+  }
+  const dates=Object.keys(state.dates).sort();
+  if(!dates.length){ msg("No legs with block times found in that file.", true); return; }
+  $("datePick").innerHTML=dates.map(d=>`<option value="${d}">${fmtDate(d)}</option>`).join("");
+  $("dateRow").style.display="block";
+  pickDate(dates[dates.length-1]);
+  if(currentJobId) saveCurrent();
+}
+function applyFormNames(){
+  if(!state.formLegs.length||!state.legs.length) return;
+  const sorted=[...state.legs].sort((a,b)=>(toMin(a.out)||0)-(toMin(b.out)||0));
+  for(let i=0;i<state.formLegs.length && i<sorted.length;i++){
+    sorted[i].from=state.formLegs[i].from; sorted[i].to=state.formLegs[i].to;
+  }
+}
+function pickDate(d){
+  state.pickedDate=d; $("datePick").value=d;
+  state.legs=(state.dates[d]||[]).slice().sort((a,b)=>toMin(a.out)-toMin(b.out));
+  applyFormNames();
+  renderLegs(); render();
+}
+
+/* ---------- time math ---------- */
+function toMin(t){ if(!t)return null; const m=t.match(/^(\d{1,2}):(\d{2})/); if(!m)return null; return (+m[1])*60+(+m[2]); }
+function legMin(l){ const a=toMin(l.out), b=toMin(l.inn); if(a==null||b==null)return 0; let d=b-a; if(d<0)d+=1440; return d; }
+function money(n){ return "$"+n.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}); }
+const MONTHS=["January","February","March","April","May","June","July","August","September","October","November","December"];
+function fmtDate(v){
+  if(v instanceof Date) return MONTHS[v.getMonth()]+" "+v.getDate()+", "+v.getFullYear();
+  const p=(v||"").split("-"); if(p.length!==3) return v||"";
+  return MONTHS[+p[1]-1]+" "+(+p[2])+", "+p[0];
+}
+
+/* ---------- leg table ---------- */
+function renderLegs(){
+  const tb=$("legTbl").querySelector("tbody"); tb.innerHTML="";
+  state.legs.forEach((l,i)=>{
+    const tr=document.createElement("tr");
+    tr.innerHTML=`<td><input type="checkbox" ${l.bill?"checked":""} data-i="${i}" data-k="bill"></td>
+      <td><input type="text" value="${l.from}" data-i="${i}" data-k="from"></td>
+      <td><input type="text" value="${l.to}" data-i="${i}" data-k="to"></td>
+      <td><input type="text" class="tiny" value="${l.out}" data-i="${i}" data-k="out" placeholder="HH:MM"></td>
+      <td><input type="text" class="tiny" value="${l.inn}" data-i="${i}" data-k="inn" placeholder="HH:MM"></td>
+      <td>${legMin(l)}</td>`;
+    tb.appendChild(tr);
+  });
+  $("legTbl").style.display=state.legs.length?"table":"none";
+}
+$("legTbl").addEventListener("input",e=>{
+  const i=+e.target.dataset.i, k=e.target.dataset.k;
+  if(k==="bill") state.legs[i].bill=e.target.checked;
+  else if(k==="to"){
+    const old=state.legs[i].to;
+    state.legs[i].to=e.target.value;
+    const nxt=state.legs[i+1];
+    if(nxt && (nxt.from===""||nxt.from===old)){
+      nxt.from=e.target.value;
+      const el=document.querySelector('#legTbl input[data-i="'+(i+1)+'"][data-k="from"]');
+      if(el) el.value=e.target.value;
+    }
+  }
+  else state.legs[i][k]=e.target.value;
+  if(k==="out"||k==="inn"){
+    const tr=e.target.closest("tr");
+    if(tr) tr.lastElementChild.textContent=legMin(state.legs[i]);
+  }
+  render();
+});
+$("addLeg").onclick=()=>{ const prev=state.legs[state.legs.length-1]; state.legs.push({from:prev?prev.to:"",to:"",out:"",inn:"",bill:true}); renderLegs(); render(); };
+
+/* ---------- additional charges ---------- */
+function renderAC(){
+  const tb=$("acTbl").querySelector("tbody"); tb.innerHTML="";
+  state.ac.forEach((a,i)=>{
+    const tr=document.createElement("tr");
+    tr.innerHTML=`<td><select data-i="${i}" data-k="type">
+        ${["Lodging","Meals","Landing fee","Tie-down","Hangar","SATCOM data","Other (CO authorized)"].map(t=>`<option ${a.type===t?"selected":""}>${t}</option>`).join("")}
+      </select></td>
+      <td><input type="text" value="${a.city||""}" data-i="${i}" data-k="city"></td>
+      <td><input type="number" class="tiny" value="${a.amt||""}" step="0.01" data-i="${i}" data-k="amt"></td>
+      <td><button class="btn ghost" data-i="${i}" data-k="del" style="padding:3px 8px">x</button></td>`;
+    tb.appendChild(tr);
+  });
+}
+$("acTbl").addEventListener("input",e=>{
+  const i=+e.target.dataset.i, k=e.target.dataset.k;
+  if(k) state.ac[i][k]= k==="amt" ? +e.target.value : e.target.value;
+  render();
+});
+$("acTbl").addEventListener("click",e=>{
+  if(e.target.dataset.k==="del"){ state.ac.splice(+e.target.dataset.i,1); renderAC(); render(); }
+});
+$("addAC").onclick=()=>{ state.ac.push({type:"Lodging",city:"",amt:0}); renderAC(); render(); };
+
+/* ---------- messages ---------- */
+function msg(text, bad){ $("msgs").insertAdjacentHTML("beforeend",`<div class="${bad?"warn":"good"}">${text}</div>`); }
+
+/* ---------- compute + render invoice ---------- */
+function compute(){
+  const line="TO";
+  const fRate = +$("rFT").value || 2793;
+  const aDay  = +$("rDA").value || 6216;
+  const preRate=Math.round(fRate/1.075*100)/100;
+  const legs = state.legs.filter(l=>l.bill && legMin(l)>0);
+  const legRows = legs.map(l=>{ const m=legMin(l); const hrs=Math.round(m/60*100)/100; return {...l, min:m, hrs, amt:Math.round(hrs*preRate*100)/100}; });
+  const fMin = legRows.reduce((s,l)=>s+l.min,0);
+  const fPre = Math.round(legRows.reduce((s,l)=>s+l.amt,0)*100)/100;
+  const fFet = Math.round(fPre*0.075*100)/100;
+  const fAmt = Math.round((fPre+fFet)*100)/100;
+  const sorted=[...legRows].sort((a,b)=>toMin(a.out)-toMin(b.out));
+  const gaps=[];
+  for(let i=1;i<sorted.length;i++){
+    let g=toMin(sorted[i].out)-toMin(sorted[i-1].inn);
+    if(g<0)g+=1440;
+    if(g>0&&g<600) gaps.push({at:(sorted[i-1].to||("stop "+i)), min:g});
+  }
+  let avail=null;
+  const hrRate=Math.round(aDay/14*100)/100, blockRate=Math.round(aDay/56*100)/100;
+  if($("fullDay").checked){ avail={kind:"day",amt:aDay,ordHrs:14,naHrs:0,naAmt:0,desc:"Daily availability, full 14-hour day ordered @ "+money(aDay)}; }
+  else{
+    const a=toMin($("accT").value), r=toMin($("relT").value);
+    if(a!=null&&r!=null){
+      let w=r-a; if(w<0)w+=1440;
+      const inc=Math.ceil(w/15);
+      const ordHrs=inc/4, naHrs=Math.max(0,14-ordHrs);
+      const amt=Math.round(inc*blockRate*100)/100;
+      const naAmt=Math.round((aDay-amt)*100)/100;
+      avail={kind:"win",a:$("accT").value,r:$("relT").value,min:w,inc,ordHrs,naHrs,naAmt,amt,
+             desc:`Availability: ${ordHrs.toFixed(2)} hr ordered @ ${money(hrRate)}/hr, window ${$("accT").value} to ${$("relT").value} (${inc} x 15-min blocks @ ${money(blockRate)})`};
+    }
+  }
+  const acAmt=state.ac.reduce((s,a)=>s+(+a.amt||0),0);
+  const ronAmt=state.ac.filter(a=>/Lodging|Meals/.test(a.type||"")).reduce((s,a)=>s+(+a.amt||0),0);
+  const miscAmt=acAmt-ronAmt;
+  const grand=fAmt+(avail?avail.amt:0)+acAmt;
+  return {line,fRate,aDay,preRate,legRows,fMin,fAmt,avail,acAmt,ronAmt,miscAmt,grand,gaps,fPre,fFet};
+}
+function applyProfile(){
+  const p=state.profile, msg=$("profileMsg");
+  if(!p||p==="manual"){ msg.innerHTML=""; $("accT").value=""; $("relT").value=""; return; }
+  const prof=PROFILES[p];
+  if(!prof) return;
+  const c=compute();
+  if(!c.legRows.length){ msg.innerHTML="<span class=\"warn\">Add flight legs first.</span>"; return; }
+  const sorted=[...c.legRows].sort((a,b)=>toMin(a.out)-toMin(b.out));
+  const fo=toMin(sorted[0].out), li=toMin(sorted[sorted.length-1].inn);
+  if(fo==null || li==null){ msg.innerHTML="<span class=\"warn\">Block times missing.</span>"; return; }
+  const fmt=m=>{ m=((m%1440)+1440)%1440; return String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0"); };
+  $("accT").value=fmt(fo-prof.pre);
+  $("relT").value=fmt(li+prof.post);
+  msg.innerHTML="<b>"+prof.desc+"</b>";
+}
+function render(){
+  $("msgs").innerHTML="";
+  const c=compute();
+  const needWin = c.legRows.length>0 && !c.avail;
+  for(const id of ["accT","relT","preAllow","postAllow","suggestWin"]){ const el=$(id); if(el) el.classList.toggle("attn", needWin); }
+  /* rail */
+  $("nAcc").classList.toggle("done", !!$("accT").value || $("fullDay").checked);
+  $("nLegs").classList.toggle("done", c.legRows.length>0);
+  $("nRel").classList.toggle("done", !!$("relT").value || $("fullDay").checked);
+  /* checks */
+  if(!$("orderNo").value && !$("jobCode").value) msg("No request reference or job code. B-27 pays only properly ordered flights: note who requested it and when, or the job code off their form, so this invoice ties back to an order.", true);
+  if(c.fMin/60>8) msg("Flight time exceeds 8 hours: pilot daily limit (B-14). Check the legs.", true);
+  if(c.avail&&c.avail.kind==="win"){
+    for(const l of c.legRows){
+      const o=toMin(l.out), a=toMin(c.avail.a), r=toMin(c.avail.r);
+      if(o!=null&&a!=null&&r!=null&&(o<a||toMin(l.inn)>r)){ msg(`Leg ${l.from||"?"} to ${l.to||"?"} falls outside the FS clock window. Fix the window or the leg.`, true); break; }
+    }
+  }
+  if(!c.avail && c.legRows.length) msg("No availability entered. If the FS had the aircraft on order, enter FS clock on/off times; the window pays for loading, unloading and standby.", true);
+  /* invoice */
+  const dt=state.pickedDate||new Date().toISOString().slice(0,10);
+  let html=`
+  <div class="head">
+    <div class="co">ALASKA SEAPLANES<small>Kalinin Aviation LLC dba Alaska Seaplanes &middot; 8907 Yandukin Drive, Juneau AK 99801 &middot; 907-789-3309 &middot; ar@flyalaskaseaplanes.com</small></div>
+    <div class="inv-meta"><b>DAILY FLIGHT USE INVOICE</b><br>Charter ID #: ${$("invNo").value||"&mdash;"}<br>Flight date: ${fmtDate(dt)}<br>Printed: ${fmtDate(new Date())}</div>
+  </div>
+  <div class="banner">U.S. Forest Service &middot; Contract 1202SA25T9402 &middot; EU-CWN Task Order 1202SA26K9402 R10-Juneau &middot; ${TAIL}</div>
+  ${(()=>{const codes=[["Job code",$("jobCode").value],["Override",$("override").value],["Unit / District",$("unit").value]].filter(c=>c[1]);
+    const ref=$("orderNo").value||($("jobCode").value?'Request form on file':'<b style="color:#B3261E">NO ORDER REF</b>');
+    return '<table><tr><th>FS request</th><th>Tail</th><th>Pilot</th>'+codes.map(c=>'<th>'+c[0]+'</th>').join('')+'</tr>'+
+      '<tr><td>'+ref+'</td><td>'+TAIL+'</td><td>'+$("pilot").value+'</td>'+codes.map(c=>'<td>'+c[1]+'</td>').join('')+'</tr></table>';})()}
+  <div class="sec">Flight time &mdash; block to block, actual clock (B-27, Clock-C)</div>
+  <table><tr><th>From</th><th>To</th><th>Block out</th><th>Block in</th><th class="r">Minutes</th><th class="r">Hours</th><th class="r">Pre-tax amount @ ${money(c.preRate)}/hr (contract wet rate ${money(c.fRate)} incl. FET)</th></tr>`;
+  for(const l of c.legRows)
+    html+=`<tr><td>${l.from}</td><td>${l.to}</td><td>${l.out}</td><td>${l.inn}</td><td class="r">${l.min}</td><td class="r">${(l.min/60).toFixed(2)}</td><td class="r">${money(l.amt)}</td></tr>`;
+  if(!c.legRows.length) html+=`<tr><td colspan="7">No flight time billed${$("wxNote").value?": "+$("wxNote").value:""}</td></tr>`;
+  html+=`<tr class="totals"><td colspan="4">FLIGHT TOTAL, PRE-TAX (Takeflite Hourly Charge / Ad Hoc entry)</td><td class="r">${c.fMin}</td><td class="r">${(c.fMin/60).toFixed(2)}</td><td class="r" style="font-size:14px">${money(c.fPre)}</td></tr></table>`;
+  if(c.gaps.length) html+='<div style="font-size:10px;font-style:italic;margin:-6px 0 10px">Ground time between legs ('+c.gaps.map(g=>g.at+" "+g.min+" min").join(", ")+') is covered by the availability window and is not billed as flight time.</div>';
+  html+=`<div class="sec">Availability (B-26 / B-29)</div>
+  <table>`;
+  if(c.avail) html+=`<tr><td>${c.avail.desc}${$("wxNote").value?` &mdash; ${$("wxNote").value}`:""}</td><td class="r" style="width:110px"><b>${money(c.avail.amt)}</b></td></tr>`;
+  else html+=`<tr><td>None billed</td><td class="r" style="width:110px">$0.00</td></tr>`;
+  html+=`</table>`;
+  if(c.legRows.length && !c.avail) html+='<div class="note noprint" style="margin-top:0">Flight legs are loaded but NO AVAILABILITY WINDOW is set, so this invoice is missing the availability money. Select a trip profile (first flight of the day, mid-day standard, mid-day heavy, last flight) or enter manual clock times. The CSV cannot know your mission context; you pick it.</div>';
+  if(c.avail && c.avail.kind==="win" && state.profile && state.profile!=="manual"){
+    const prof=PROFILES[state.profile];
+    if(prof) html+='<div class="note noprint" style="margin-top:0"><b>Availability charged per trip profile:</b> "'+state.profile.replace(/([A-Z])/g,' $1').trim()+'" — '+prof.desc+' This window covers all mission work outside the flight legs themselves, from our first crew action until the aircraft is released back to us.';
+  }
+  if(state.ac.length){
+    html+=`<div class="sec">Additional charges (approved, B-33 / B-37)</div><table><tr><th>Type</th><th>City / County</th><th class="r">Amount</th></tr>`;
+    for(const a of state.ac) html+=`<tr><td>${a.type}</td><td>${a.city||""}</td><td class="r">${money(+a.amt||0)}</td></tr>`;
+    html+=`</table>`;
+  }
+  const wt=$("weight").value, px=$("pax").value, pilot=$("pilot").value;
+  if(wt||px){
+    const confirmed=state.wtPxConfirmed?" <span style='color:var(--ok)'>✓ confirmed</span>":"";
+    const pxCount=(+px||0)+1; // passengers + pilot
+    html+=`<div class="sec">Trip summary${confirmed}</div><table><tr>${wt?'<tr><td><b>Cargo weight</b></td><td class="r"><b>'+wt+' lbs</b></td></tr>':""}
+  ${px||px==='0'?'<tr><td><b>Passengers</b></td><td class="r"><b>'+px+'</b></td></tr>':""}<tr><td><b>Pilot</b></td><td class="r"><b>'+pilot+'</b></td></tr><tr><td><b>Persons on board</b></td><td class="r"><b>'+pxCount+'</b></td></tr></table>`;
+  }
+  const beforeTax=Math.round((c.fPre+(c.avail?c.avail.amt:0)+c.acAmt)*100)/100;
+  html+=`<div class="sec">Totals</div>
+  <table>
+  <tr><td><b>Before tax amount</b>  (flight ${(c.fMin/60).toFixed(2)} hr pre-tax <b>${money(c.fPre)}</b>${c.avail?" + availability "+money(c.avail.amt):""}${c.acAmt?" + additional charges "+money(c.acAmt):""})</td><td class="r" style="width:140px"><b>${money(beforeTax)}</b></td></tr>
+  <tr><td><b>Tax</b>  (federal excise, 7.5% on flight time; included in the ${money(c.fRate)}/hr contract rate per clause A-5, not added on top)</td><td class="r"><b>${money(c.fFet)}</b></td></tr>
+  <tr class="totals grand"><td>TOTAL INVOICED AMOUNT</td><td class="r" style="font-size:15px">${money(c.grand)}</td></tr></table>
+  <div class="sec">IBS / FS-6500-122 pay code summary (for accounting)</div>
+  <table><tr><th>Pay code</th><th>Detail</th><th class="r" style="width:120px">Amount</th></tr>
+  <tr><td>FT</td><td>Flight time ${(c.fMin/60).toFixed(2)} hr @ ${money(c.fRate)} (tax-incl contract rate)</td><td class="r">${money(c.fAmt)}</td></tr>
+  ${c.avail?`<tr><td>AV</td><td>Daily availability, full 14-hour day</td><td class="r">${money(c.aDay)}</td></tr>`:""}
+  ${c.avail&&c.avail.naHrs>0?`<tr><td>NA</td><td>Non-availability ${c.avail.naHrs.toFixed(2)} hr @ ${money(c.aDay/14)}</td><td class="r">-${money(c.avail.naAmt)}</td></tr>`:""}
+  ${c.ronAmt?`<tr><td>RON</td><td>Overnight charges</td><td class="r">${money(c.ronAmt)}</td></tr>`:""}
+  ${c.miscAmt?`<tr><td>Misc</td><td>Other approved charges</td><td class="r">${money(c.miscAmt)}</td></tr>`:""}
+  <tr class="totals grand"><td colspan="2">122 TOTAL ALL CHARGES</td><td class="r">${money(c.grand)}</td></tr></table>
+  <div class="note noprint" style="margin-top:0">Key new work under contract 1202SA25T9402, not legacy 1202SA21G5700. Column mapping is our best read of the IBS invoice screen; confirm with the COR whether availability dollars key under AV or ES before the first entry on the new contract.</div>
+  <div class="note noprint">This form mirrors IBS flight use invoice entries: Clock-C flight legs at actual times (no rounding), daily availability, and additional charge line items. Attach: Flight Request form, FRAT, hazmat manifest if applicable, Spidertracks summary. Rate line per order; flight rate subject to C-20 fuel EPA.</div>`;
+  $("invoice").innerHTML=html;
+  $("gapInfo").textContent=c.gaps.length?("Ground time between legs: "+c.gaps.map(g=>g.at+" "+g.min+" min").join(", ")+" (paid by the availability window)"):"";
+  const preTax=Math.round(c.fRate/1.075*100)/100;
+  const tfSub=Math.round((c.fPre+(c.avail?c.avail.amt:0)+c.acAmt)*100)/100;
+  $("tfTotals").innerHTML="Takeflite (Ad Hoc Price): Hourly Charge <b>"+money(c.fPre)+"</b> (pre-tax flight lump; TF's 7.5% brings it to "+money(c.fAmt)+")"
+   +(c.avail?"  |  Extras Price <b>"+money(c.avail.amt)+"</b>, tax 0.00":"")
+   +(c.acAmt?"  |  other charges "+money(c.acAmt)+" (untaxed extras, per accounting)":"")
+   +"<br>TF should then read: Sub Total "+money(tfSub)+" = invoice Before Tax  |  Taxes "+money(c.fFet)+" = invoice Tax  |  Total Cost <span style='color:var(--gold);background:var(--navy);padding:2px 8px;border-radius:3px'>"+money(c.grand)+"</span> = invoice Total.  Per-hour alternative: "+money(preTax)+"/hr, only with chargeable hours corrected to actual "+(c.fMin/60).toFixed(2)+".";
+}
+
+/* ---------- pending flights queue (local storage; swap these five functions for Supabase later) ---------- */
+const QKEY="aksfs_queue_v1";
+let currentJobId=null, saveTimer=null;
+function qLoad(){ try{ return JSON.parse(localStorage.getItem(QKEY)||"[]"); }catch(e){ return []; } }
+function qStore(list){ try{ localStorage.setItem(QKEY, JSON.stringify(list)); }catch(e){ msg("Could not save the queue (storage blocked or full).", true); } }
+function qGet(id){ return qLoad().find(j=>j.id===id); }
+function qUpsert(job){ const list=qLoad(); const i=list.findIndex(j=>j.id===job.id); if(i>=0) list[i]=job; else list.unshift(job); qStore(list); renderQueue(); }
+function qDelete(id){ qStore(qLoad().filter(j=>j.id!==id)); if(currentJobId===id) currentJobId=null; renderQueue(); }
+
+function snapshot(status){
+  const f={}; for(const id of ["orderNo","invNo","jobCode","override","unit","pilot","wxNote","accT","relT","preAllow","postAllow"]) f[id]=$(id).value;
+  f.fullDay=$("fullDay").checked;
+  const c=compute();
+  return { id: currentJobId||String(Date.now()), status, created: (qGet(currentJobId)||{}).created||new Date().toISOString(),
+    updated:new Date().toISOString(), fields:f, legs:state.legs, formLegs:state.formLegs, formHaz:state.formHaz,
+    pickedDate:state.pickedDate, ac:state.ac, grand:c.grand, route:invMeta(c).route, profile:state.profile, wtPxConfirmed:state.wtPxConfirmed };
+}
+function saveCurrent(status){ const j=snapshot(status||((qGet(currentJobId)||{}).status)||"pending"); currentJobId=j.id; qUpsert(j); }
+function scheduleSave(){ if(!currentJobId) return; clearTimeout(saveTimer); saveTimer=setTimeout(()=>saveCurrent(), 900); }
+
+function restoreJob(id){
+  const j=qGet(id); if(!j) return;
+  currentJobId=id;
+  for(const k in j.fields){ const el=$(k); if(!el) continue; if(k==="fullDay") el.checked=!!j.fields[k]; else el.value=j.fields[k]??""; }
+  $("fullDay").checked=!!j.fields.fullDay;
+  state.legs=j.legs||[]; state.formLegs=j.formLegs||[]; state.formHaz=j.formHaz||[]; state.ac=j.ac||[]; state.pickedDate=j.pickedDate||""; state.profile=j.profile||null; state.wtPxConfirmed=j.wtPxConfirmed||false;
+  $("dateRow").style.display="none";
+  renderLegs(); renderAC(); renderFormHint(); render();
+  $("msgs").innerHTML=""; msg("Opened: "+(j.fields.orderNo||j.route||"saved flight")+". Drop the Spidertracks CSV when it has flown.", false);
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+function renderQueue(){
+  const list=qLoad(); const d=$("queueList");
+  if(!list.length){ d.textContent="No saved flights yet."; return; }
+  d.innerHTML=list.map(j=>{
+    const date=j.pickedDate?fmtDate(j.pickedDate):(j.fields&&j.fields.orderNo?"":"no date");
+    return '<div class="qrow"><span class="chip '+j.status+'">'+j.status.toUpperCase()+'</span>'
+      +'<b>'+((j.fields&&j.fields.orderNo)||"(no request ref)")+'</b>'
+      +'<span>'+(j.route||"")+'</span><span class="muted">'+(date||"")+'</span>'
+      +(j.status==="completed"?'<span><b>'+money(j.grand||0)+'</b></span>':"")
+      +'<span style="flex:1"></span>'
+      +'<button class="btn ghost qbtn" data-open="'+j.id+'">Open</button>'
+      +'<button class="btn ghost qbtn" data-del="'+j.id+'">x</button></div>';
+  }).join("");
+}
+document.addEventListener("click",e=>{
+  if(e.target.dataset&&e.target.dataset.open) restoreJob(e.target.dataset.open);
+  if(e.target.dataset&&e.target.dataset.del){ if(confirm("Delete this saved flight?")) qDelete(e.target.dataset.del); }
+});
+
+/* ---------- request form PDF ---------- */
+let pdfjsReady=null;
+function ensurePdfJs(){
+  if(window.pdfjsLib) return Promise.resolve();
+  if(pdfjsReady) return pdfjsReady;
+  pdfjsReady=new Promise((res,rej)=>{
+    const s=document.createElement("script");
+    s.src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
+    s.onload=()=>{ window.pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"; res(); };
+    s.onerror=()=>{ pdfjsReady=null; rej(new Error("offline")); };
+    document.head.appendChild(s);
+  });
+  return pdfjsReady;
+}
+async function loadPDF(file){
+  try{ await ensurePdfJs(); }
+  catch(e){ msg("Reading the request form needs internet once (PDF reader loads from cdnjs). The CSV import still works offline; type the order info manually.", true); return; }
+  try{
+    const data=new Uint8Array(await file.arrayBuffer());
+    const doc=await window.pdfjsLib.getDocument({data}).promise;
+    const fields=await doc.getFieldObjects();
+    if(!fields){ msg("That PDF has no fillable fields (scanned or flattened copy). Type the order info manually.", true); return; }
+    const val=n=>{ const a=fields[n]; return a&&a[0]&&a[0].value!=null? String(a[0].value).trim():""; };
+    const req=val("Requester"), fdate=val("Todays Date");
+    if(req||fdate) $("orderNo").value=[req,fdate?("form "+fdate):""].filter(Boolean).join(" ");
+    if(val("Job CodeRow1")) $("jobCode").value=val("Job CodeRow1");
+    if(val("OverrideRow1")) $("override").value=val("OverrideRow1");
+    const unit=[val("User / Unit"),val("Offfice, SO, RD")].filter(Boolean).join(", ");
+    if(unit) $("unit").value=unit;
+    state.formLegs=[];
+    for(let i=1;i<=5;i++){
+      let fr=val("Depart FromRow"+i), to=val("Arrival ToRow"+i);
+      fr=fr.replace(/\s+\d{3,4}$/,""); to=to.replace(/\s+\d{3,4}$/,"");
+      if(fr&&to) state.formLegs.push({from:fr,to:to});
+    }
+    state.formHaz=["Ammunition","Bear Spray","Flammable ie fuel","Combustible ie Paint"].filter(n=>val(n)==="On");
+    // Try multiple field name variants for total weight
+    let wt = val("Total Weight") || val("TotalWeight") || val("Total weight");
+    // Passengers: look for the "Total:" field in the passengers section (usually the sum at bottom)
+    // This form shows "Total: 225" for pax weight, but we need passenger COUNT, not weight
+    // For now, count from the filled rows: look for names in the pax table
+    let px = 0;
+    // Extract passenger count from the form if possible (this is tricky without field names)
+    // Fallback: let dispatcher enter it
+    if(wt) $("weight").value=wt;
+    if(px>0) $("pax").value=px;
+    if(!state.legs.length && state.formLegs.length){
+      state.legs=state.formLegs.map(fl=>({from:fl.from,to:fl.to,out:"",inn:"",bill:true}));
+    } else { applyFormNames(); }
+    renderLegs(); renderFormHint(); render();
+    saveCurrent("pending");
+    msg("Request form read and SAVED AS PENDING: "+(req||"requester unknown")+", "+state.formLegs.length+" planned legs. It will wait in the queue until the flight happens.", false);
+  }catch(e){ msg("Couldn't read that PDF ("+e.message+"). Type the order info manually.", true); }
+}
+function renderFormHint(){
+  const d=$("formHint");
+  if(!d) return;
+  if(!state.formLegs.length){ d.innerHTML=""; return; }
+  const chain=[state.formLegs[0].from,...state.formLegs.map(l=>l.to)].join(" \u2192 ");
+  d.innerHTML='<span class="muted">Route on the request form: <b>'+chain+'</b></span> '
+   +'<button class="btn ghost" id="applyNames" type="button" style="padding:3px 10px;margin-left:8px">Apply names to legs</button>'
+   +(state.formHaz.length?'<div class="warn" style="margin-top:6px">Form lists hazmat ('+state.formHaz.join(", ")+"): keep the manifest in this invoice packet.</div>":"");
+  $("applyNames").onclick=()=>{ applyFormNames(); renderLegs(); render(); };
+}
+function routeFile(f){ if(!f) return; if(/\.pdf$/i.test(f.name)) loadPDF(f); else f.text().then(loadCSV); }
+
+/* ---------- wiring ---------- */
+["orderNo","invNo","jobCode","override","unit","pilot","accT","relT","fullDay","wxNote","rFT","rDA","weight","pax"]
+  .forEach(id=>$(id).addEventListener("input",()=>{state.wtPxConfirmed=false; render();scheduleSave();}));
+["btnFirst","btnMidStd","btnMidHvy","btnLast","btnManual"].forEach(id=>{
+  $(id).addEventListener("click",e=>{e.preventDefault(); const prof=e.target.dataset.profile; state.profile=prof; applyProfile(); render(); scheduleSave();});
+});
+$("confirmWtPx").addEventListener("click",e=>{
+  e.preventDefault();
+  if(!$("weight").value && !$("pax").value){ msg("Fill in weight and/or passengers first.", true); return; }
+  state.wtPxConfirmed=true;
+  const pxCount=(+$("pax").value||0)+1;
+  msg("Cargo "+($("weight").value||"—")+" lbs, "+$("pax").value+" pax + pilot = "+pxCount+" persons confirmed. Ready to invoice.", false);
+  render(); scheduleSave();
+});
+$("datePick").addEventListener("change",e=>pickDate(e.target.value));
+$("drop").onclick=()=>$("file").click();
+$("drop").addEventListener("dragover",e=>{e.preventDefault();$("drop").classList.add("on");});
+$("drop").addEventListener("dragleave",()=>$("drop").classList.remove("on"));
+$("drop").addEventListener("drop",e=>{
+  e.preventDefault();$("drop").classList.remove("on");
+  for(const f of e.dataTransfer.files) routeFile(f);
+});
+$("file").addEventListener("change",e=>{ for(const f of e.target.files) routeFile(f); e.target.value=""; });
+$("suggestWin").onclick=()=>{
+  const c=compute();
+  if(!c.legRows.length){ $("msgs").innerHTML=""; msg("Add flight legs first: the window computes from first block-out and last block-in.", true); return; }
+  const pre=+$("preAllow").value||0, post=+$("postAllow").value||0;
+  if(!pre&&!post){ $("msgs").innerHTML=""; msg("Pick pre and post allowances from the standard schedule first.", true); return; }
+  const sorted=[...c.legRows].sort((a,b)=>toMin(a.out)-toMin(b.out));
+  const fo=toMin(sorted[0].out), li=toMin(sorted[sorted.length-1].inn);
+  const fmt=m=>{ m=((m%1440)+1440)%1440; return String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0"); };
+  $("accT").value=fmt(fo-pre); $("relT").value=fmt(li+post);
+  render();
+};
+window.addEventListener("beforeprint",()=>{ document.body.appendChild($("invoice")); document.body.classList.add("printing"); });
+window.addEventListener("afterprint",()=>{ $("invoiceWrap").appendChild($("invoice")); document.body.classList.remove("printing"); });
+function invMeta(c){
+  const dp=(state.pickedDate||new Date().toISOString().slice(0,10)).split("-");
+  const ds=dp.length===3?dp[1]+"-"+dp[2]+"-"+dp[0].slice(2):"";
+  let route="";
+  if(c.legRows.length){
+    const stops=[c.legRows[0].from,...c.legRows.map(l=>l.to)].map(s=>(s||"").trim()).filter(Boolean);
+    route=stops.join("-");
+  } else route=TAIL+" availability only";
+  const name=((ds?ds+" ":"")+route+" FS Invoice").replace(/[\\/:*?"<>|]/g,"-");
+  return {ds,route,name};
+}
+$("qNew").onclick=()=>{ if(confirm("Start a new blank invoice? The current one stays saved in the queue.")) location.reload(); };
+$("qExport").onclick=()=>{
+  const blob=new Blob([localStorage.getItem(QKEY)||"[]"],{type:"application/json"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="aks-fs-flight-queue.json"; a.click();
+};
+$("qImport").onclick=()=>$("qImportFile").click();
+$("qImportFile").addEventListener("change",e=>{
+  const f=e.target.files[0]; if(!f) return;
+  f.text().then(t=>{ try{ const inc=JSON.parse(t); const cur=qLoad(); const ids=new Set(cur.map(j=>j.id));
+    for(const j of inc) if(!ids.has(j.id)) cur.push(j);
+    qStore(cur); renderQueue(); msg("Queue imported and merged.", false);
+  }catch(err){ msg("That file is not a queue export.", true); } });
+  e.target.value="";
+});
+renderQueue();
+$("printBtn").onclick=()=>{
+  const c=compute(); const {name}=invMeta(c);
+  const old=document.title; document.title=name;
+  const restore=()=>{document.title=old;window.removeEventListener("afterprint",restore);};
+  window.addEventListener("afterprint",restore);
+  window.print(); setTimeout(restore,2000);
+  if(currentJobId) saveCurrent();
+};
+$("emailBtn").onclick=()=>{
+  const c=compute(); const m=invMeta(c);
+  const su=m.name+"  "+money(c.grand);
+  const availLine=c.avail
+    ? "Availability: "+(c.avail.kind==="day" ? "full 14-hour day" : (c.avail.a+" to "+c.avail.r+" ("+c.avail.inc+" x 15-min blocks)"))+" = "+money(c.avail.amt)
+    : "Availability: none billed";
+  const lines=[
+    "Daily Flight Use Invoice, "+fmtDate(state.pickedDate||new Date())+", "+TAIL+".",
+    "Charter ID: "+($("invNo").value||"n/a")+"   FS request: "+($("orderNo").value||"n/a")+"   Pilot: "+$("pilot").value,
+    "Flight: "+(c.fMin/60).toFixed(2)+" hr = "+money(c.fAmt),
+    availLine,
+    c.acAmt?("Additional charges: "+money(c.acAmt)):"",
+    "Total invoiced: "+money(c.grand),
+    "",
+    "Invoice PDF attached: "+m.name+".pdf"
+  ].filter(Boolean);
+  saveCurrent("completed");
+  window.open("https://mail.google.com/mail/?view=cm&fs=1&to="+encodeURIComponent(EMAIL_TO)
+    +"&cc="+encodeURIComponent(EMAIL_CC)
+    +"&su="+encodeURIComponent(su)
+    +"&body="+encodeURIComponent(lines.join("\n")),"_blank");
+  $("msgs").innerHTML="";
+  msg("Gmail compose opened, addressed and written. ATTACH "+m.name+".pdf (save it with the print button first) before sending. That attach-and-send click is also your final review.", false);
+};
+render();
+</script>
+</body>
+</html>
