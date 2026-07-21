@@ -724,7 +724,15 @@ function invMeta(c){
   const name=((ds?ds+" ":"")+route+" FS Invoice").replace(/[\\/:*?"<>|]/g,"-");
   return {ds,route,name};
 }
-$("saveDraft").onclick=()=>{ saveCurrent("pending"); msg("Saved to queue as PENDING. You can open another flight from the queue.", false); };
+const saveDraftBtn=$("saveDraft");
+if(saveDraftBtn){
+  saveDraftBtn.addEventListener("click",e=>{
+    e.preventDefault();
+    console.log("Save Draft clicked");
+    saveCurrent("pending");
+    msg("Saved to queue as PENDING. Check the queue at the top to see it.", false);
+  });
+}
 $("qNew").onclick=()=>{ if(confirm("Start a new blank invoice? The current one stays saved in the queue.")) location.reload(); };
 $("qExport").onclick=()=>{
   const blob=new Blob([localStorage.getItem(QKEY)||"[]"],{type:"application/json"});
