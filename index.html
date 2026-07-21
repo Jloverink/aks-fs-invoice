@@ -52,24 +52,24 @@
   /* ---------- invoice ---------- */
   #invoiceWrap{background:#fff;border:1px solid var(--line);border-radius:6px;padding:0}
   @media screen { #invoiceWrap{overflow:auto} }
-  #invoice{width:8.3in;margin:0 auto;padding:.55in .6in;font:13px/1.4 Arial;color:#000;background:#fff}
-  #invoice .head{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid var(--navy);padding-bottom:8px}
-  #invoice .co{font:800 24px/1 "Arial Narrow",Arial;letter-spacing:.06em;color:var(--navy)}
-  #invoice .co small{display:block;font:400 10px Arial;letter-spacing:.05em;color:#444;margin-top:3px}
-  #invoice .inv-meta{text-align:right;font-size:12px;white-space:nowrap}
+  #invoice{width:8.3in;margin:0 auto;padding:.4in .5in;font:12px/1.35 Arial;color:#000;background:#fff}
+  #invoice .head{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid var(--navy);padding-bottom:4px}
+  #invoice .co{font:800 20px/1 "Arial Narrow",Arial;letter-spacing:.06em;color:var(--navy)}
+  #invoice .co small{display:block;font:400 9px Arial;letter-spacing:.05em;color:#444;margin-top:1px}
+  #invoice .inv-meta{text-align:right;font-size:11px;white-space:nowrap}
   #invoice .banner{background:var(--navy);color:#fff;text-align:center;font:700 11px "Arial Narrow";letter-spacing:.18em;
     text-transform:uppercase;padding:4px;margin:10px 0}
-  #invoice table{width:100%;border-collapse:collapse;font-size:12px;margin:6px 0 12px}
-  #invoice th{background:#EDF0F3;border:1px solid #999;padding:4px 6px;font:700 10px "Arial Narrow";letter-spacing:.08em;text-transform:uppercase;text-align:left}
-  #invoice td{border:1px solid #999;padding:4px 6px}
+  #invoice table{width:100%;border-collapse:collapse;font-size:11px;margin:4px 0 8px}
+  #invoice th{background:#EDF0F3;border:1px solid #999;padding:3px 4px;font:700 9px "Arial Narrow";letter-spacing:.08em;text-transform:uppercase;text-align:left}
+  #invoice td{border:1px solid #999;padding:3px 4px}
   #invoice .r{text-align:right}
-  #invoice .sec{font:700 12px "Arial Narrow";letter-spacing:.12em;text-transform:uppercase;color:var(--navy);margin:12px 0 2px;border-bottom:1px solid var(--navy)}
+  #invoice .sec{font:700 11px "Arial Narrow";letter-spacing:.12em;text-transform:uppercase;color:var(--navy);margin:6px 0 2px;border-bottom:1px solid var(--navy)}
   #invoice .totals td{font-weight:bold}
   #invoice .grand{background:#EDF0F3}
   #invoice .foot{display:flex;justify-content:space-between;gap:24px;margin-top:14px;font-size:11px}
   #invoice .sig{margin-top:26px;display:flex;gap:30px;font-size:11px}
   #invoice .sig div{flex:1;border-top:1px solid #000;padding-top:3px}
-  #invoice .note{font-size:9.5px;color:#333;margin-top:10px;font-style:italic}
+  #invoice .note{font-size:9px;color:#333;margin-top:4px;font-style:italic;line-height:1.2}
   @media print{
     body.printing > .bar, body.printing > .wrap{display:none !important}
     .noprint{display:none !important}
@@ -101,6 +101,10 @@
   <div class="panel">
     <h2><span class="tick">&#9992;&nbsp;</span> Pending FS flights <span class="muted" style="font-weight:normal;text-transform:none;letter-spacing:0">(drop a request PDF below to add one; saved on this computer)</span></h2>
     <div id="queueList" class="muted">No saved flights yet.</div>
+    <div style="margin-top:8px;padding:8px;background:#FFF8EC;border-radius:4px;border-left:4px solid var(--gold);font-size:12px">
+      <b style="color:var(--navy)">PENDING</b> = ready to complete (awaiting Spidertracks CSV)<br>
+      <b style="color:var(--ok)">COMPLETED</b> = invoiced and emailed (still editable)
+    </div>
     <div style="margin-top:8px">
       <button class="btn ghost qbtn" id="qNew" type="button">New blank invoice</button>
       <button class="btn ghost qbtn" id="qExport" type="button">Export queue</button>
@@ -160,6 +164,7 @@
     <div class="muted" style="margin-top:6px">Uncheck any leg that was not FS work (e.g. scheduled runs on the same day).
       Engine start then cancel: add a manual leg 6 minutes long and note it below.</div>
     <div id="gapInfo" class="muted" style="margin-top:4px;font-weight:bold"></div>
+    <button class="btn ghost" id="saveDraft" type="button" style="margin-top:8px">Save to queue as PENDING</button>
   </div>
 
   <div class="panel" style="margin-top:16px">
@@ -537,8 +542,8 @@ function render(){
   <tr><td><b>Before tax amount</b>  (flight ${(c.fMin/60).toFixed(2)} hr pre-tax <b>${money(c.fPre)}</b>${c.avail?" + availability "+money(c.avail.amt):""}${c.acAmt?" + additional charges "+money(c.acAmt):""})</td><td class="r" style="width:140px"><b>${money(beforeTax)}</b></td></tr>
   <tr><td><b>Tax</b>  (federal excise, 7.5% on flight time; included in the ${money(c.fRate)}/hr contract rate per clause A-5, not added on top)</td><td class="r"><b>${money(c.fFet)}</b></td></tr>
   <tr class="totals grand"><td>TOTAL INVOICED AMOUNT</td><td class="r" style="font-size:15px">${money(c.grand)}</td></tr></table>
-  <div class="sec">IBS / FS-6500-122 pay code summary (for accounting)</div>
-  <table><tr><th>Pay code</th><th>Detail</th><th class="r" style="width:120px">Amount</th></tr>
+  <div class="sec" style="page-break-before:avoid">IBS / FS-6500-122 pay code summary (for accounting)</div>
+  <table style="page-break-inside:avoid"><tr><th>Pay code</th><th>Detail</th><th class="r" style="width:120px">Amount</th></tr>
   <tr><td>FT</td><td>Flight time ${(c.fMin/60).toFixed(2)} hr @ ${money(c.fRate)} (tax-incl contract rate)</td><td class="r">${money(c.fAmt)}</td></tr>
   ${c.avail?`<tr><td>AV</td><td>Daily availability, full 14-hour day</td><td class="r">${money(c.aDay)}</td></tr>`:""}
   ${c.avail&&c.avail.naHrs>0?`<tr><td>NA</td><td>Non-availability ${c.avail.naHrs.toFixed(2)} hr @ ${money(c.aDay/14)}</td><td class="r">-${money(c.avail.naAmt)}</td></tr>`:""}
@@ -719,6 +724,7 @@ function invMeta(c){
   const name=((ds?ds+" ":"")+route+" FS Invoice").replace(/[\\/:*?"<>|]/g,"-");
   return {ds,route,name};
 }
+$("saveDraft").onclick=()=>{ saveCurrent("pending"); msg("Saved to queue as PENDING. You can open another flight from the queue.", false); };
 $("qNew").onclick=()=>{ if(confirm("Start a new blank invoice? The current one stays saved in the queue.")) location.reload(); };
 $("qExport").onclick=()=>{
   const blob=new Blob([localStorage.getItem(QKEY)||"[]"],{type:"application/json"});
