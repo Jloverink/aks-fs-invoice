@@ -594,8 +594,13 @@ function qUpsert(job){ const list=qLoad(); const i=list.findIndex(j=>j.id===job.
 function qDelete(id){ qStore(qLoad().filter(j=>j.id!==id)); if(currentJobId===id) currentJobId=null; renderQueue(); }
 
 function snapshot(status){
-  const f={}; for(const id of ["orderNo","invNo","jobCode","override","unit","pilot","wxNote","accT","relT","preAllow","postAllow"]) f[id]=$(id).value;
-  f.fullDay=$("fullDay").checked;
+  const f={}; 
+  for(const id of ["orderNo","invNo","jobCode","override","unit","pilot","wxNote","accT","relT","preAllow","postAllow","weight","pax"]){
+    const el=$(id); 
+    if(el) f[id]=el.value;
+  }
+  const fullDayEl=$("fullDay"); 
+  f.fullDay=fullDayEl ? fullDayEl.checked : false;
   const c=compute();
   return { id: currentJobId||String(Date.now()), status, created: (qGet(currentJobId)||{}).created||new Date().toISOString(),
     updated:new Date().toISOString(), fields:f, legs:state.legs, formLegs:state.formLegs, formHaz:state.formHaz,
