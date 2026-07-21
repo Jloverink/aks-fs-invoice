@@ -50,8 +50,9 @@
   .muted{color:var(--slate);font-size:12px}
   .addrow{margin-top:6px}
   /* ---------- invoice ---------- */
-  #invoiceWrap{background:#fff;border:1px solid var(--line);border-radius:6px;padding:0;overflow:auto}
-  #invoice{width:8.3in;min-height:10in;margin:0 auto;padding:.55in .6in;font:13px/1.4 Arial;color:#000;background:#fff}
+  #invoiceWrap{background:#fff;border:1px solid var(--line);border-radius:6px;padding:0}
+  @media screen { #invoiceWrap{overflow:auto} }
+  #invoice{width:8.3in;margin:0 auto;padding:.55in .6in;font:13px/1.4 Arial;color:#000;background:#fff}
   #invoice .head{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid var(--navy);padding-bottom:8px}
   #invoice .co{font:800 24px/1 "Arial Narrow",Arial;letter-spacing:.06em;color:var(--navy)}
   #invoice .co small{display:block;font:400 10px Arial;letter-spacing:.05em;color:#444;margin-top:3px}
@@ -72,9 +73,11 @@
   @media print{
     body.printing > .bar, body.printing > .wrap{display:none !important}
     .noprint{display:none !important}
-    #invoice{position:static;width:100%;min-height:0;padding:.25in .4in;box-shadow:none}
+    #invoice{position:static;width:100%;padding:.25in .4in;box-shadow:none;page-break-after:avoid}
+    #invoiceWrap{overflow:visible !important}
   }
-  @page{margin:0.4in}
+  @page{margin:0.4in;size:letter}
+  @page :first{margin-top:0.4in}
   .noprint{background:#FFFBEA;border:1px dashed #C9A227;padding:4px 6px}
   .noprint::before{content:"SCREEN ONLY, NOT PRINTED: ";font-weight:bold;color:#8A5A00}
   .attn{outline:2px solid var(--gold) !important;background:#FFF8EC !important}
@@ -513,7 +516,7 @@ function render(){
   if(c.legRows.length && !c.avail) html+='<div class="note noprint" style="margin-top:0">Flight legs are loaded but NO AVAILABILITY WINDOW is set, so this invoice is missing the availability money. Select a trip profile (first flight of the day, mid-day standard, mid-day heavy, last flight) or enter manual clock times. The CSV cannot know your mission context; you pick it.</div>';
   if(c.avail && c.avail.kind==="win" && state.profile && state.profile!=="manual"){
     const prof=PROFILES[state.profile];
-    if(prof) html+='<div class="note noprint" style="margin-top:0"><b>Availability charged per trip profile:</b> "'+state.profile.replace(/([A-Z])/g,' $1').trim()+'" — '+prof.desc+' This window covers all mission work outside the flight legs themselves, from our first crew action until the aircraft is released back to us.';
+    if(prof) html+='<div class="note" style="margin-top:0"><b>Availability charged per trip profile:</b> "'+state.profile.replace(/([A-Z])/g,' $1').trim()+'" — '+prof.desc+' This window covers all mission work outside the flight legs themselves, from our first crew action until the aircraft is released back to us.';
   }
   if(state.ac.length){
     html+=`<div class="sec">Additional charges (approved, B-33 / B-37)</div><table><tr><th>Type</th><th>City / County</th><th class="r">Amount</th></tr>`;
@@ -522,7 +525,7 @@ function render(){
   }
   const wt=$("weight").value, px=$("pax").value, pilot=$("pilot").value;
   if(wt||px){
-    const confirmed=state.wtPxConfirmed?" <span style='color:var(--ok)'>✓ confirmed</span>":"";
+    const confirmed=state.wtPxConfirmed?" ✓ CONFIRMED":"";
     const pxCount=(+px||0)+1; // passengers + pilot
     html+=`<div class="sec">Trip summary${confirmed}</div><table>`
       +(wt?`<tr><td><b>Cargo weight</b></td><td class="r"><b>${wt} lbs</b></td></tr>`:"")
