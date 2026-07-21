@@ -164,7 +164,8 @@
     <div class="muted" style="margin-top:6px">Uncheck any leg that was not FS work (e.g. scheduled runs on the same day).
       Engine start then cancel: add a manual leg 6 minutes long and note it below.</div>
     <div id="gapInfo" class="muted" style="margin-top:4px;font-weight:bold"></div>
-    <button class="btn ghost" id="saveDraft" type="button" style="margin-top:8px">Save to queue as PENDING</button>
+    <button class="btn ghost" id="saveDraft" type="button" style="margin-top:8px">Save now (auto-saving on edits)</button>
+    <button class="btn" id="markComplete" type="button" style="margin-top:8px; background:#E8F5E9; color:#2E7D32; border:1px solid #4CAF50">Mark as COMPLETED</button>
   </div>
 
   <div class="panel" style="margin-top:16px">
@@ -607,7 +608,11 @@ function snapshot(status){
     pickedDate:state.pickedDate, ac:state.ac, grand:c.grand, route:invMeta(c).route, profile:state.profile, wtPxConfirmed:state.wtPxConfirmed };
 }
 function saveCurrent(status){ const j=snapshot(status||((qGet(currentJobId)||{}).status)||"pending"); currentJobId=j.id; qUpsert(j); syncToCloud(); }
-function scheduleSave(){ if(!currentJobId) return; clearTimeout(saveTimer); saveTimer=setTimeout(()=>saveCurrent(), 900); }
+function scheduleSave(){
+  if(!currentJobId) currentJobId = String(Date.now()); // Auto-create queue entry
+  clearTimeout(saveTimer);
+  saveTimer=setTimeout(()=>saveCurrent("pending"), 900); // Auto-save as PENDING after 900ms of inactivity
+}
 
 function restoreJob(id){
   const j=qGet(id); if(!j) return;
@@ -620,14 +625,37 @@ function restoreJob(id){
   $("msgs").innerHTML=""; msg("Opened: "+(j.fields.orderNo||j.route||"saved flight")+". Drop the Spidertracks CSV when it has flown.", false);
   window.scrollTo({top:0,behavior:"smooth"});
 }
+
+function getMissingInfo(){
+  const c = compute();
+  const missing = [];
+  if(!$("pilot").value) missing.push("Pilot");
+  if(!$("weight").value && !$("pax").value) missing.push("Weight/Pax");
+  if(!$("accT").value || !$("relT").value) missing.push("Window");
+  if(!c.legRows || c.legRows.length === 0) missing.push("Legs");
+  return missing;
+}
+
 function renderQueue(){
   const list=qLoad(); const d=$("queueList");
   if(!list.length){ d.textContent="No saved flights yet."; return; }
   d.innerHTML=list.map(j=>{
     const date=j.pickedDate?fmtDate(j.pickedDate):(j.fields&&j.fields.orderNo?"":"no date");
+    let missingLabel = "";
+    if(j.status === "pending"){
+      const legCount = (j.legs || []).length;
+      const hasPilot = j.fields && j.fields.pilot;
+      const hasWindow = j.fields && j.fields.accT && j.fields.relT;
+      const missing = [];
+      if(!hasPilot) missing.push("Pilot");
+      if(!legCount) missing.push("Legs");
+      if(!hasWindow) missing.push("Window");
+      if(missing.length > 0) missingLabel = ` <span class="muted" style="font-size:11px;">(need: ${missing.join(", ")})</span>`;
+    }
     return '<div class="qrow"><span class="chip '+j.status+'">'+j.status.toUpperCase()+'</span>'
       +'<b>'+((j.fields&&j.fields.orderNo)||"(no request ref)")+'</b>'
       +'<span>'+(j.route||"")+'</span><span class="muted">'+(date||"")+'</span>'
+      +missingLabel
       +(j.status==="completed"?'<span><b>'+money(j.grand||0)+'</b></span>':"")
       +'<span style="flex:1"></span>'
       +'<button class="btn ghost qbtn" data-open="'+j.id+'">Open</button>'
@@ -756,22 +784,23 @@ const saveDraftBtn=$("saveDraft");
 if(saveDraftBtn){
   saveDraftBtn.addEventListener("click",e=>{
     e.preventDefault();
-    console.log("=== Save Draft Button Clicked ===");
-    try{
-      const before = qLoad().length;
-      console.log("Queue before:", before, "flights");
-      saveCurrent("pending");
-      const after = qLoad().length;
-      console.log("Queue after:", after, "flights");
-      msg("✓ Saved to PENDING queue", false);
-    }catch(err){
-      console.error("ERROR:", err.message);
-      alert("Save failed: " + err.message);
-    }
+    console.log("Manual save now clicked");
+    if(!currentJobId) currentJobId = String(Date.now());
+    clearTimeout(saveTimer);
+    saveCurrent("pending");
+    msg("✓ Saved to queue", false);
   });
-  console.log("Save draft button ready");
-} else {
-  console.error("ERROR: saveDraft button not found");
+}
+
+const markCompleteBtn=$("markComplete");
+if(markCompleteBtn){
+  markCompleteBtn.addEventListener("click",e=>{
+    e.preventDefault();
+    if(!currentJobId){ msg("Create an invoice first", true); return; }
+    saveCurrent("completed");
+    msg("✓ Moved to COMPLETED in queue", false);
+    setTimeout(()=>renderQueue(), 300);
+  });
 }
 $("qNew").onclick=()=>{ if(confirm("Start a new blank invoice? The current one stays saved in the queue.")) location.reload(); };
 $("qExport").onclick=()=>{
