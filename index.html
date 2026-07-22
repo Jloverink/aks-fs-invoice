@@ -832,15 +832,14 @@ $("emailBtn").onclick=()=>{
   const availLine=c.avail
     ? "Availability: "+(c.avail.kind==="day" ? "full 14-hour day" : (c.avail.a+" to "+c.avail.r+" ("+c.avail.inc+" x 15-min blocks)"))+" = "+money(c.avail.amt)
     : "Availability: none billed";
+  const tripRoute = m.route || "Flight";
+  const tripDate = fmtDate(state.pickedDate || new Date());
   const lines=[
-    "Daily Flight Use Invoice, "+fmtDate(state.pickedDate||new Date())+", "+TAIL+".",
-    "Charter ID: "+($("invNo").value||"n/a")+"   FS request: "+($("orderNo").value||"n/a")+"   Pilot: "+$("pilot").value,
-    "Flight: "+(c.fMin/60).toFixed(2)+" hr = "+money(c.fAmt),
-    availLine,
-    c.acAmt?("Additional charges: "+money(c.acAmt)):"",
-    "Total invoiced: "+money(c.grand),
+    "Attached is the invoice for the "+tripRoute+" trip on "+tripDate+".",
     "",
-    "Invoice PDF attached: "+m.name+".pdf"
+    "Total: "+money(c.grand),
+    "",
+    "See the PDF for full details."
   ].filter(Boolean);
   saveCurrent("completed");
   window.open("https://mail.google.com/mail/?view=cm&fs=1&to="+encodeURIComponent(EMAIL_TO)
