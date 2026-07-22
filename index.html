@@ -837,9 +837,14 @@ $("emailBtn").onclick=()=>{
   const lines=[
     "Attached is the invoice for the "+tripRoute+" trip on "+tripDate+".",
     "",
+    "Aircraft: "+TAIL+"   Pilot: "+$("pilot").value,
+    "Flight time: "+(c.fMin/60).toFixed(2)+" hr = "+money(c.fAmt),
+    availLine,
+    (c.acAmt?("Additional charges: "+money(c.acAmt)):""),
+    "",
     "Total: "+money(c.grand),
     "",
-    "See the PDF for full details."
+    "Thank you"
   ].filter(Boolean);
   saveCurrent("completed");
   window.open("https://mail.google.com/mail/?view=cm&fs=1&to="+encodeURIComponent(EMAIL_TO)
