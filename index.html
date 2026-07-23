@@ -454,9 +454,9 @@ function compute(){
   const legs = state.legs.filter(l=>l.bill && legMin(l)>0);
   const legRows = legs.map(l=>{ const m=legMin(l); const hrs=Math.round(m/60*100)/100; return {...l, min:m, hrs, amt:Math.round(hrs*preRate*100)/100}; });
   const fMin = legRows.reduce((s,l)=>s+l.min,0);
-  const fPre = Math.round(legRows.reduce((s,l)=>s+l.amt,0)*100)/100;
-  const fFet = Math.round(fPre*0.075*100)/100;
-  const fAmt = Math.round((fPre+fFet)*100)/100;
+  const fAmt = Math.round(legRows.reduce((s,l)=>s+l.amt,0)*100)/100; // Total tax-inclusive first
+  const fPre = Math.round(fAmt/1.075*100)/100; // Then derive pre-tax
+  const fFet = Math.round((fAmt-fPre)*100)/100; // Then derive FET (ensures tax-inclusive total)
   const sorted=[...legRows].sort((a,b)=>toMin(a.out)-toMin(b.out));
   const gaps=[];
   for(let i=1;i<sorted.length;i++){
