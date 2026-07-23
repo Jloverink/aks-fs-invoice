@@ -101,6 +101,13 @@
   <div class="panel">
     <h2><span class="tick">&#9992;&nbsp;</span> Pending FS flights <span class="muted" style="font-weight:normal;text-transform:none;letter-spacing:0">(drop a request PDF below to add one; saved on this computer)</span></h2>
     <div id="queueList" class="muted">No saved flights yet.</div>
+    
+    <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--line)">
+      <button id="toggleCompleted" type="button" style="background:none;border:none;cursor:pointer;color:var(--navy);font-weight:bold;font-size:13px;padding:0">
+        ▶ COMPLETED FLIGHTS (<span id="completedCount">0</span>)
+      </button>
+      <div id="completedList" style="display:none;margin-top:8px"></div>
+    </div>
     <div style="margin-top:8px;padding:8px;background:#FFF8EC;border-radius:4px;border-left:4px solid var(--gold);font-size:12px">
       <b style="color:var(--navy)">PENDING</b> = ready to complete (awaiting Spidertracks CSV)<br>
       <b style="color:var(--ok)">COMPLETED</b> = invoiced and emailed (still editable)
@@ -685,6 +692,19 @@ function renderQueue(){
     }
   }
 }
+
+// Toggle completed flights visibility
+const toggleBtn = $("toggleCompleted");
+if(toggleBtn){
+  toggleBtn.addEventListener("click", e => {
+    e.preventDefault();
+    const list = $("completedList");
+    const isHidden = list.style.display === "none";
+    list.style.display = isHidden ? "block" : "none";
+    toggleBtn.textContent = (isHidden ? "▼" : "▶") + " COMPLETED FLIGHTS (" + ($("completedCount").textContent || 0) + ")";
+  });
+}
+
 document.addEventListener("click",e=>{
   if(e.target.dataset&&e.target.dataset.open) restoreJob(e.target.dataset.open);
   if(e.target.dataset&&e.target.dataset.del){ if(confirm("Delete this saved flight?")) qDelete(e.target.dataset.del); }
