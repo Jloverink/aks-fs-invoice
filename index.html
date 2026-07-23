@@ -638,30 +638,52 @@ function getMissingInfo(){
 }
 
 function renderQueue(){
-  const list=qLoad(); const d=$("queueList");
-  if(!list.length){ d.textContent="No saved flights yet."; return; }
-  d.innerHTML=list.map(j=>{
-    const date=j.pickedDate?fmtDate(j.pickedDate):(j.fields&&j.fields.orderNo?"":"no date");
-    let missingLabel = "";
-    if(j.status === "pending"){
-      const legCount = (j.legs || []).length;
-      const hasPilot = j.fields && j.fields.pilot;
-      const hasWindow = j.fields && j.fields.accT && j.fields.relT;
-      const missing = [];
-      if(!hasPilot) missing.push("Pilot");
-      if(!legCount) missing.push("Legs");
-      if(!hasWindow) missing.push("Window");
-      if(missing.length > 0) missingLabel = ` <span class="muted" style="font-size:11px;">(need: ${missing.join(", ")})</span>`;
+  const list=qLoad(); 
+  const pending = list.filter(j => j.status === "pending");
+  const completed = list.filter(j => j.status === "completed");
+  
+  const d=$("queueList");
+  if(!pending.length){ d.textContent="No pending flights."; } 
+  else {
+    d.innerHTML=pending.map(j=>{
+      const date=j.pickedDate?fmtDate(j.pickedDate):(j.fields&&j.fields.orderNo?"":"no date");
+      let missingLabel = "";
+      if(j.status === "pending"){
+        const legCount = (j.legs || []).length;
+        const hasPilot = j.fields && j.fields.pilot;
+        const hasWindow = j.fields && j.fields.accT && j.fields.relT;
+        const missing = [];
+        if(!hasPilot) missing.push("Pilot");
+        if(!legCount) missing.push("Legs");
+        if(!hasWindow) missing.push("Window");
+        if(missing.length > 0) missingLabel = ` <span class="muted" style="font-size:11px;">(need: ${missing.join(", ")})</span>`;
+      }
+      return '<div class="qrow"><span class="chip pending">PENDING</span>'
+        +'<b>'+((j.fields&&j.fields.orderNo)||("(no request ref)"))+'</b>'
+        +'<span>'+(j.route||"")+'</span><span class="muted">'+(date||"")+'</span>'
+        +missingLabel
+        +'<span style="flex:1"></span>'
+        +'<button class="btn ghost qbtn" data-open="'+j.id+'">Open</button>'
+        +'<button class="btn ghost qbtn" data-del="'+j.id+'">x</button></div>';
+    }).join("");
+  }
+  
+  const completedDiv = $("completedList");
+  if(completedDiv){
+    $("completedCount").textContent = completed.length;
+    if(completed.length > 0){
+      completedDiv.innerHTML = completed.map(j=>{
+        const date=j.pickedDate?fmtDate(j.pickedDate):(j.fields&&j.fields.orderNo?"":"no date");
+        return '<div class="qrow"><span class="chip completed">COMPLETED</span>'
+          +'<b>'+((j.fields&&j.fields.orderNo)||("(no request ref)"))+'</b>'
+          +'<span>'+(j.route||"")+'</span><span class="muted">'+(date||"")+'</span>'
+          +'<span><b>'+money(j.grand||0)+'</b></span>'
+          +'<span style="flex:1"></span>'
+          +'<button class="btn ghost qbtn" data-open="'+j.id+'">Open</button>'
+          +'<button class="btn ghost qbtn" data-del="'+j.id+'">x</button></div>';
+      }).join("");
     }
-    return '<div class="qrow"><span class="chip '+j.status+'">'+j.status.toUpperCase()+'</span>'
-      +'<b>'+((j.fields&&j.fields.orderNo)||"(no request ref)")+'</b>'
-      +'<span>'+(j.route||"")+'</span><span class="muted">'+(date||"")+'</span>'
-      +missingLabel
-      +(j.status==="completed"?'<span><b>'+money(j.grand||0)+'</b></span>':"")
-      +'<span style="flex:1"></span>'
-      +'<button class="btn ghost qbtn" data-open="'+j.id+'">Open</button>'
-      +'<button class="btn ghost qbtn" data-del="'+j.id+'">x</button></div>';
-  }).join("");
+  }
 }
 document.addEventListener("click",e=>{
   if(e.target.dataset&&e.target.dataset.open) restoreJob(e.target.dataset.open);
