@@ -543,7 +543,8 @@ function render(){
   for(const l of c.legRows)
     html+=`<tr><td>${l.from}</td><td>${l.to}</td><td>${l.out}</td><td>${l.inn}</td><td class="r">${l.min}</td><td class="r">${(l.min/60).toFixed(2)}</td><td class="r">${money(Math.round(l.amt/1.075*100)/100)}</td></tr>`;
   if(!c.legRows.length) html+=`<tr><td colspan="7">No flight time billed${$("wxNote").value?": "+$("wxNote").value:""}</td></tr>`;
-  html+=`<tr class="totals"><td colspan="4">FLIGHT TOTAL, PRE-TAX (Takeflite Hourly Charge / Ad Hoc entry)</td><td class="r">${c.fMin}</td><td class="r">${(c.fMin/60).toFixed(2)}</td><td class="r" style="font-size:14px">${money(c.fPre)}</td></tr></table>`;
+  html+=`<tr class="totals"><td colspan="4">FLIGHT TOTAL, PRE-TAX (Takeflite Hourly Charge / Ad Hoc entry)</td><td class="r">${c.fMin}</td><td class="r">${(c.fMin/60).toFixed(2)}</td><td class="r" style="font-size:14px">${money(c.fPre)}</td></tr>
+  <tr class="totals"><td colspan="4">FLIGHT TOTAL, TAX-INCLUSIVE (@ ${money(c.fRate)}/hr contract rate)</td><td class="r"></td><td class="r">${(c.fMin/60).toFixed(2)}</td><td class="r" style="font-size:14px;color:#666">${money(c.fAmt)}</td></tr></table>`;
   if(c.gaps.length) html+='<div style="font-size:10px;font-style:italic;margin:-6px 0 10px">Ground time between legs ('+c.gaps.map(g=>g.at+" "+g.min+" min").join(", ")+') is covered by the availability window and is not billed as flight time.</div>';
   html+=`<div class="sec">Availability (B-26 / B-29)</div>
   <table>`;
