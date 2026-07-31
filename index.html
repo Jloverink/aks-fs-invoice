@@ -573,6 +573,7 @@ function render(){
   html+=`<div class="sec">Totals</div>
   <table>
   <tr><td><b>Before tax amount</b>  (flight ${(c.fMin/60).toFixed(2)} hr pre-tax <b>${money(c.fPre)}</b>${c.avail?" + availability "+money(c.avail.amt):""}${c.acAmt?" + additional charges "+money(c.acAmt):""})</td><td class="r" style="width:140px"><b>${money(beforeTax)}</b></td></tr>
+  <tr><td style="font-size:11px;color:#666"><i>Flight verification: ${(c.fMin/60).toFixed(2)} hr × ${money(c.fRate)}/hr (tax-incl contract rate) = ${money(c.fAmt)} tax-incl (${money(c.fPre)} pre-tax)</i></td></tr>
   <tr><td><b>Tax</b>  (federal excise, 7.5% on flight time; included in the ${money(c.fRate)}/hr contract rate per clause A-5, not added on top)</td><td class="r"><b>${money(c.fFet)}</b></td></tr>
   <tr class="totals grand"><td>TOTAL INVOICED AMOUNT</td><td class="r" style="font-size:15px">${money(c.grand)}</td></tr></table>
   <div class="sec" style="page-break-before:avoid">IBS / FS-6500-122 pay code summary (for accounting)</div>
