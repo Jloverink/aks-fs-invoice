@@ -539,7 +539,7 @@ function render(){
     return '<table><tr><th>FS request</th><th>Tail</th><th>Pilot</th>'+codes.map(c=>'<th>'+c[0]+'</th>').join('')+'</tr>'+
       '<tr><td>'+ref+'</td><td>'+TAIL+'</td><td>'+$("pilot").value+'</td>'+codes.map(c=>'<td>'+c[1]+'</td>').join('')+'</tr></table>';})()}
   <div class="sec">Flight time &mdash; block to block, actual clock (B-27, Clock-C)</div>
-  <table><tr><th>From</th><th>To</th><th>Block out</th><th>Block in</th><th class="r">Minutes</th><th class="r">Hours</th><th class="r">Pre-tax amount (contract rate ${money(c.fRate)}/hr tax-inclusive)</th></tr>`;
+  <table><tr><th>From</th><th>To</th><th>Block out</th><th>Block in</th><th class="r">Minutes</th><th class="r">Hours</th><th class="r">Pre-tax amount</th></tr>`;
   for(const l of c.legRows)
     html+=`<tr><td>${l.from}</td><td>${l.to}</td><td>${l.out}</td><td>${l.inn}</td><td class="r">${l.min}</td><td class="r">${(l.min/60).toFixed(2)}</td><td class="r">${money(Math.round(l.amt/1.075*100)/100)}</td></tr>`;
   if(!c.legRows.length) html+=`<tr><td colspan="7">No flight time billed${$("wxNote").value?": "+$("wxNote").value:""}</td></tr>`;
