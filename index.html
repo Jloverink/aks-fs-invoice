@@ -250,6 +250,7 @@
       <div><label>Rates (TO 1202SA26K9402, per COR + FS-6500-122)</label>
         <div style="padding:7px 8px;border:1px solid var(--line);border-radius:4px;background:var(--paper);font-size:13px"><b>$2,793.00</b>/flight hr &middot; DA <b>$6,216</b>/14-hr day = <b>$444.00</b>/hr = <b>$111.00</b> per 15-min block</div></div>
       <div><label>Weather / cancel note (optional)</label><input type="text" id="wxNote" placeholder="e.g. FS cancelled 10:40, wx"></div>
+      <div style="margin-top:8px"><label><input type="checkbox" id="nonWxCancel"> Non-weather cancellation (bill 2-hr minimum availability per contract amendment)</label></div>
     </div>
     <details style="margin-top:8px"><summary class="muted">Edit rates (after a new mod only)</summary>
       <div class="grid2" style="margin-top:6px">
@@ -485,6 +486,14 @@ function compute(){
       avail={kind:"win",a:$("accT").value,r:$("relT").value,min:w,inc,ordHrs,naHrs,naAmt,amt,
              desc:`Availability: ${ordHrs.toFixed(2)} hr ordered @ ${money(hrRate)}/hr, window ${$("accT").value} to ${$("relT").value} (${inc} x 15-min blocks @ ${money(blockRate)})`};
     }
+  }
+  // Override availability if non-weather cancellation is checked
+  if($("nonWxCancel").checked){
+    const inc=8; // 2 hours = 8 x 15-min blocks
+    const ordHrs=2;
+    const blockRate=Math.round(aDay/56*100)/100;
+    const amt=Math.round(inc*blockRate*100)/100;
+    avail={kind:"non-wx-cancel",ordHrs:2,amt,desc:`Non-weather cancellation: 2-hour minimum availability @ ${money(Math.round(aDay/14*100)/100)}/hr`};
   }
   const acAmt=state.ac.reduce((s,a)=>s+(+a.amt||0),0);
   const ronAmt=state.ac.filter(a=>/Lodging|Meals/.test(a.type||"")).reduce((s,a)=>s+(+a.amt||0),0);
