@@ -163,6 +163,7 @@
       <label>Flight date found in file</label>
       <select id="datePick"></select>
     </div>
+    <div id="splitHint"></div>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px">
       <div id="blockTabs" style="display:flex;gap:6px;flex-wrap:wrap"></div>
       <button class="btn ghost" id="addBlockBtn" type="button" style="padding:6px 12px;font-size:12px">+ Add flight block</button>
@@ -398,6 +399,46 @@ function pickDate(d){
   applyFormNames();
   renderBlockTabs();
   renderLegs(); render();
+  renderSplitHint();
+}
+const GAP_SPLIT_MIN = 60;
+function isBase(name){ return /juneau|jnu|pajn/i.test((name||"").trim()); }
+function detectBlockGroups(legs){
+  const groups=[[]];
+  for(let i=0;i<legs.length;i++){
+    groups[groups.length-1].push(legs[i]);
+    const nxt=legs[i+1];
+    if(!nxt) continue;
+    const a=toMin(legs[i].inn), b=toMin(nxt.out);
+    if(a==null||b==null) continue;
+    let gap=b-a; if(gap<0) gap+=1440;
+    if(gap>=GAP_SPLIT_MIN && isBase(legs[i].to)) groups.push([]);
+  }
+  return groups.filter(g=>g.length);
+}
+function renderSplitHint(){
+  const d=$("splitHint"); if(!d) return;
+  d.innerHTML="";
+  if(state.blocks.length!==1) return;
+  const groups=detectBlockGroups(state.blocks[0].legs);
+  if(groups.length<2) return;
+  const gaps=[];
+  for(let g=0; g<groups.length-1; g++){
+    const a=toMin(groups[g][groups[g].length-1].inn), b=toMin(groups[g+1][0].out);
+    let m=b-a; if(m<0)m+=1440;
+    gaps.push(Math.floor(m/60)+"h "+String(m%60).padStart(2,"0")+"m");
+  }
+  d.innerHTML='<div class="warn" style="margin-top:8px">This day looks like '+groups.length+' flight blocks: the plane was back in Juneau for '+gaps.join(" and ")+' between them. Per the agreement with the COR, Juneau ground time between blocks is not billed.'
+    +'<div style="margin-top:6px"><button class="btn ghost" id="doSplit" type="button" style="padding:3px 10px">Split into '+groups.length+' blocks</button> '
+    +'<button class="btn ghost" id="noSplit" type="button" style="padding:3px 10px">Keep as one window</button></div></div>';
+  $("doSplit").onclick=()=>{
+    state.blocks=groups.map(g=>({legs:g, profile:null, accT:"", relT:""}));
+    state.activeBlockIdx=0;
+    d.innerHTML="";
+    renderBlockTabs(); renderLegs(); render(); scheduleSave();
+    msg("Split into "+state.blocks.length+" blocks. Set a trip profile on each block tab.", false);
+  };
+  $("noSplit").onclick=()=>{ d.innerHTML=""; };
 }
 
 /* ---------- time math ---------- */
@@ -430,15 +471,23 @@ function renderBlockTabs(){
 }
 function renderLegs(){
   const ab = activeBlock();
+  const multi = state.blocks.length>1;
+  $("legTbl").querySelector("thead tr").innerHTML =
+    "<th>Bill</th><th>From</th><th>To</th><th>Out</th><th>In</th><th>Min</th>"+(multi?"<th>Blk</th>":"");
   const tb=$("legTbl").querySelector("tbody"); tb.innerHTML="";
   ab.legs.forEach((l,i)=>{
     const tr=document.createElement("tr");
+    const mv = multi
+      ? `<td><select class="tiny" data-i="${i}" data-k="mv" title="Move this leg to another block">`
+        + state.blocks.map((_,b)=>`<option value="${b}"${b===state.activeBlockIdx?" selected":""}>B${b+1}</option>`).join("")
+        + `</select></td>`
+      : "";
     tr.innerHTML=`<td><input type="checkbox" ${l.bill?"checked":""} data-i="${i}" data-k="bill"></td>
       <td><input type="text" value="${l.from}" data-i="${i}" data-k="from"></td>
       <td><input type="text" value="${l.to}" data-i="${i}" data-k="to"></td>
       <td><input type="text" class="tiny" value="${l.out}" data-i="${i}" data-k="out" placeholder="HH:MM"></td>
       <td><input type="text" class="tiny" value="${l.inn}" data-i="${i}" data-k="inn" placeholder="HH:MM"></td>
-      <td>${legMin(l)}</td>`;
+      <td>${legMin(l)}</td>${mv}`;
     tb.appendChild(tr);
   });
   $("legTbl").style.display=ab.legs.length?"table":"none";
@@ -446,6 +495,7 @@ function renderLegs(){
 $("legTbl").addEventListener("input",e=>{
   const ab = activeBlock();
   const i=+e.target.dataset.i, k=e.target.dataset.k;
+  if(k==="mv") return;
   if(k==="bill") ab.legs[i].bill=e.target.checked;
   else if(k==="to"){
     const old=ab.legs[i].to;
@@ -463,6 +513,16 @@ $("legTbl").addEventListener("input",e=>{
     if(tr) tr.lastElementChild.textContent=legMin(ab.legs[i]);
   }
   render();
+});
+$("legTbl").addEventListener("change",e=>{
+  if(e.target.dataset.k!=="mv") return;
+  const dest=+e.target.value;
+  if(dest===state.activeBlockIdx || !state.blocks[dest]) return;
+  const ab=activeBlock();
+  const leg=ab.legs.splice(+e.target.dataset.i,1)[0];
+  state.blocks[dest].legs.push(leg);
+  state.blocks[dest].legs.sort((a,b)=>(toMin(a.out)||0)-(toMin(b.out)||0));
+  renderLegs(); render(); scheduleSave();
 });
 $("addLeg").onclick=()=>{ 
   const ab = activeBlock();
@@ -726,6 +786,7 @@ function restoreJob(id){
   $("accT").value = ab.accT || "";
   $("relT").value = ab.relT || "";
   $("dateRow").style.display="none";
+  const sh=$("splitHint"); if(sh) sh.innerHTML="";
   renderBlockTabs(); renderLegs(); renderAC(); renderFormHint(); render();
   $("msgs").innerHTML=""; msg("Opened: "+(j.fields.orderNo||j.route||"saved flight")+". Drop the Spidertracks CSV when it has flown.", false);
   window.scrollTo({top:0,behavior:"smooth"});
