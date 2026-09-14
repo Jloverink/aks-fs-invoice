@@ -290,7 +290,25 @@
 <script>
 "use strict";
 const $ = id => document.getElementById(id);
-const state = { legs: [], ac: [], dates: {}, pickedDate: "", formLegs: [], formHaz: [], profile: null, wtPxConfirmed: false };
+const state = { 
+  blocks: [{ legs: [], profile: null, accT: "", relT: "" }], 
+  activeBlockIdx: 0,
+  ac: [], dates: {}, pickedDate: "", formLegs: [], formHaz: [], wtPxConfirmed: false 
+};
+
+// Helpers for block management
+function activeBlock() { return state.blocks[state.activeBlockIdx] || state.blocks[0]; }
+function setActiveBlock(idx) { if(idx >= 0 && idx < state.blocks.length) state.activeBlockIdx = idx; }
+function addBlock() { state.blocks.push({ legs: [], profile: null, accT: "", relT: "" }); state.activeBlockIdx = state.blocks.length - 1; }
+function removeBlock(idx) { if(state.blocks.length > 1) { state.blocks.splice(idx, 1); if(state.activeBlockIdx >= state.blocks.length) state.activeBlockIdx = state.blocks.length - 1; } }
+function getLegRows(block) { 
+  const fRate = +$("rFT").value || 2793.00;
+  return block.legs.map(l => { 
+    const m = legMin(l); 
+    const hrs = Math.round(m/60*100)/100; 
+    return {...l, min:m, hrs, amt: Math.round(hrs*fRate*100)/100}; 
+  });
+}
 
 // Supabase cloud sync
 let sbReady = false;
@@ -373,8 +391,12 @@ function applyFormNames(){
 }
 function pickDate(d){
   state.pickedDate=d; $("datePick").value=d;
-  state.legs=(state.dates[d]||[]).slice().sort((a,b)=>toMin(a.out)-toMin(b.out));
+  // Load legs from CSV data into first block
+  const legsForDate = (state.dates[d]||[]).slice().sort((a,b)=>toMin(a.out)-toMin(b.out));
+  state.blocks = [{ legs: legsForDate, profile: null, accT: "", relT: "" }];
+  state.activeBlockIdx = 0;
   applyFormNames();
+  renderBlockTabs();
   renderLegs(); render();
 }
 
@@ -390,9 +412,26 @@ function fmtDate(v){
 }
 
 /* ---------- leg table ---------- */
+function renderBlockTabs(){
+  const container = $("blockTabs");
+  if(!container) return;
+  container.innerHTML = "";
+  for(let i = 0; i < state.blocks.length; i++){
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "btn ghost";
+    if(i === state.activeBlockIdx) btn.className += " gold";
+    btn.style.padding = "6px 12px";
+    btn.style.fontSize = "12px";
+    btn.textContent = `Block ${i+1}`;
+    btn.onclick = () => { setActiveBlock(i); renderBlockTabs(); renderLegs(); render(); scheduleSave(); };
+    container.appendChild(btn);
+  }
+}
 function renderLegs(){
+  const ab = activeBlock();
   const tb=$("legTbl").querySelector("tbody"); tb.innerHTML="";
-  state.legs.forEach((l,i)=>{
+  ab.legs.forEach((l,i)=>{
     const tr=document.createElement("tr");
     tr.innerHTML=`<td><input type="checkbox" ${l.bill?"checked":""} data-i="${i}" data-k="bill"></td>
       <td><input type="text" value="${l.from}" data-i="${i}" data-k="from"></td>
@@ -402,29 +441,36 @@ function renderLegs(){
       <td>${legMin(l)}</td>`;
     tb.appendChild(tr);
   });
-  $("legTbl").style.display=state.legs.length?"table":"none";
+  $("legTbl").style.display=ab.legs.length?"table":"none";
 }
 $("legTbl").addEventListener("input",e=>{
+  const ab = activeBlock();
   const i=+e.target.dataset.i, k=e.target.dataset.k;
-  if(k==="bill") state.legs[i].bill=e.target.checked;
+  if(k==="bill") ab.legs[i].bill=e.target.checked;
   else if(k==="to"){
-    const old=state.legs[i].to;
-    state.legs[i].to=e.target.value;
-    const nxt=state.legs[i+1];
+    const old=ab.legs[i].to;
+    ab.legs[i].to=e.target.value;
+    const nxt=ab.legs[i+1];
     if(nxt && (nxt.from===""||nxt.from===old)){
       nxt.from=e.target.value;
       const el=document.querySelector('#legTbl input[data-i="'+(i+1)+'"][data-k="from"]');
       if(el) el.value=e.target.value;
     }
   }
-  else state.legs[i][k]=e.target.value;
+  else ab.legs[i][k]=e.target.value;
   if(k==="out"||k==="inn"){
     const tr=e.target.closest("tr");
-    if(tr) tr.lastElementChild.textContent=legMin(state.legs[i]);
+    if(tr) tr.lastElementChild.textContent=legMin(ab.legs[i]);
   }
   render();
 });
-$("addLeg").onclick=()=>{ const prev=state.legs[state.legs.length-1]; state.legs.push({from:prev?prev.to:"",to:"",out:"",inn:"",bill:true}); renderLegs(); render(); };
+$("addLeg").onclick=()=>{ 
+  const ab = activeBlock();
+  const prev=ab.legs[ab.legs.length-1]; 
+  ab.legs.push({from:prev?prev.to:"",to:"",out:"",inn:"",bill:true}); 
+  renderLegs(); 
+  render(); 
+};
 
 /* ---------- additional charges ---------- */
 function renderAC(){
@@ -459,51 +505,73 @@ function compute(){
   const fRate = +$("rFT").value || 2793;
   const aDay  = +$("rDA").value || 6216;
   const preRate=Math.round(fRate/1.075*100)/100;
-  const legs = state.legs.filter(l=>l.bill && legMin(l)>0);
-  const legRows = legs.map(l=>{ const m=legMin(l); const hrs=Math.round(m/60*100)/100; return {...l, min:m, hrs, amt:Math.round(hrs*fRate*100)/100}; });
-  const fMin = legRows.reduce((s,l)=>s+l.min,0);
-  const fAmt = Math.round(legRows.reduce((s,l)=>s+l.amt,0)*100)/100; // Total tax-inclusive first
-  const fPre = Math.round(fAmt/1.075*100)/100; // Then derive pre-tax
-  const fFet = Math.round((fAmt-fPre)*100)/100; // Then derive FET (ensures tax-inclusive total)
-  const sorted=[...legRows].sort((a,b)=>toMin(a.out)-toMin(b.out));
+  const hrRate=Math.round(aDay/14*100)/100, blockRate=Math.round(aDay/56*100)/100;
+  
+  // Aggregate flight legs and availability across all blocks
+  let allLegRows = [];
+  let totalAvailAmt = 0;
+  let totalAvailDesc = [];
+  
+  for(let bi = 0; bi < state.blocks.length; bi++){
+    const block = state.blocks[bi];
+    const legs = block.legs.filter(l=>l.bill && legMin(l)>0);
+    const legRows = legs.map(l=>{ const m=legMin(l); const hrs=Math.round(m/60*100)/100; return {...l, min:m, hrs, amt:Math.round(hrs*fRate*100)/100}; });
+    allLegRows = allLegRows.concat(legRows);
+    
+    // Calculate availability for this block (only if it has legs)
+    if(legRows.length > 0){
+      let blockAvail = null;
+      if(block.accT && block.relT && toMin(block.accT) != null && toMin(block.relT) != null){
+        const a = toMin(block.accT), r = toMin(block.relT);
+        let w = r - a; if(w < 0) w += 1440;
+        const inc = Math.ceil(w/15);
+        const ordHrs = inc/4;
+        const amt = Math.round(inc*blockRate*100)/100;
+        blockAvail = {amt, ordHrs, inc, accT: block.accT, relT: block.relT};
+        totalAvailAmt += amt;
+        totalAvailDesc.push(`Block ${bi+1}: ${ordHrs.toFixed(2)} hr (${block.accT} to ${block.relT})`);
+      }
+    }
+  }
+  
+  const fMin = allLegRows.reduce((s,l)=>s+l.min,0);
+  const fAmt = Math.round(allLegRows.reduce((s,l)=>s+l.amt,0)*100)/100;
+  const fPre = Math.round(fAmt/1.075*100)/100;
+  const fFet = Math.round((fAmt-fPre)*100)/100;
+  
+  const sorted=[...allLegRows].sort((a,b)=>toMin(a.out)-toMin(b.out));
   const gaps=[];
   for(let i=1;i<sorted.length;i++){
     let g=toMin(sorted[i].out)-toMin(sorted[i-1].inn);
     if(g<0)g+=1440;
     if(g>0&&g<600) gaps.push({at:(sorted[i-1].to||("stop "+i)), min:g});
   }
+  
   let avail=null;
-  const hrRate=Math.round(aDay/14*100)/100, blockRate=Math.round(aDay/56*100)/100;
-  if($("fullDay").checked){ avail={kind:"day",amt:aDay,ordHrs:14,naHrs:0,naAmt:0,desc:"Daily availability, full 14-hour day ordered @ "+money(aDay)}; }
-  else{
-    const a=toMin($("accT").value), r=toMin($("relT").value);
-    if(a!=null&&r!=null){
-      let w=r-a; if(w<0)w+=1440;
-      const inc=Math.ceil(w/15);
-      const ordHrs=inc/4, naHrs=Math.max(0,14-ordHrs);
-      const amt=Math.round(inc*blockRate*100)/100;
-      const naAmt=Math.round((aDay-amt)*100)/100;
-      avail={kind:"win",a:$("accT").value,r:$("relT").value,min:w,inc,ordHrs,naHrs,naAmt,amt,
-             desc:`Availability: ${ordHrs.toFixed(2)} hr ordered @ ${money(hrRate)}/hr, window ${$("accT").value} to ${$("relT").value} (${inc} x 15-min blocks @ ${money(blockRate)})`};
-    }
+  if($("fullDay").checked){ 
+    avail={kind:"day",amt:aDay,ordHrs:14,naHrs:0,naAmt:0,desc:"Daily availability, full 14-hour day ordered @ "+money(aDay)}; 
+  } else if(totalAvailAmt > 0){
+    avail={kind:"multi",amt:totalAvailAmt,desc:`Availability (${state.blocks.length} blocks): `+totalAvailDesc.join("; ")};
   }
+  
   // Override availability if non-weather cancellation is checked
   if($("nonWxCancel").checked){
-    const inc=8; // 2 hours = 8 x 15-min blocks
+    const inc=8;
     const ordHrs=2;
-    const blockRate=Math.round(aDay/56*100)/100;
     const amt=Math.round(inc*blockRate*100)/100;
     avail={kind:"non-wx-cancel",ordHrs:2,amt,desc:`Non-weather cancellation: 2-hour minimum availability @ ${money(Math.round(aDay/14*100)/100)}/hr`};
   }
+  
   const acAmt=state.ac.reduce((s,a)=>s+(+a.amt||0),0);
   const ronAmt=state.ac.filter(a=>/Lodging|Meals/.test(a.type||"")).reduce((s,a)=>s+(+a.amt||0),0);
   const miscAmt=acAmt-ronAmt;
   const grand=fAmt+(avail?avail.amt:0)+acAmt;
-  return {line,fRate,aDay,preRate,legRows,fMin,fAmt,avail,acAmt,ronAmt,miscAmt,grand,gaps,fPre,fFet};
+  return {line,fRate,aDay,preRate,legRows:allLegRows,fMin,fAmt,avail,acAmt,ronAmt,miscAmt,grand,gaps,fPre,fFet};
 }
 function applyProfile(){
-  const p=state.profile, msg=$("profileMsg");
-  if(!p||p==="manual"){ msg.innerHTML=""; $("accT").value=""; $("relT").value=""; return; }
+  const ab = activeBlock();
+  const p=ab.profile, msg=$("profileMsg");
+  if(!p||p==="manual"){ msg.innerHTML=""; $("accT").value=""; $("relT").value=""; ab.accT=""; ab.relT=""; return; }
   const prof=PROFILES[p];
   if(!prof) return;
   const c=compute();
@@ -512,11 +580,15 @@ function applyProfile(){
   const fo=toMin(sorted[0].out), li=toMin(sorted[sorted.length-1].inn);
   if(fo==null || li==null){ msg.innerHTML="<span class=\"warn\">Block times missing.</span>"; return; }
   const fmt=m=>{ m=((m%1440)+1440)%1440; return String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0"); };
-  $("accT").value=fmt(fo-prof.pre);
-  $("relT").value=fmt(li+prof.post);
+  const accTval=fmt(fo-prof.pre), relTval=fmt(li+prof.post);
+  $("accT").value=accTval;
+  $("relT").value=relTval;
+  ab.accT=accTval;
+  ab.relT=relTval;
   msg.innerHTML="<b>"+prof.desc+"</b>";
 }
 function render(){
+  renderBlockTabs();
   $("msgs").innerHTML="";
   const c=compute();
   const needWin = c.legRows.length>0 && !c.avail;
@@ -624,8 +696,8 @@ function snapshot(status){
   f.fullDay=fullDayEl ? fullDayEl.checked : false;
   const c=compute();
   return { id: currentJobId||String(Date.now()), status, created: (qGet(currentJobId)||{}).created||new Date().toISOString(),
-    updated:new Date().toISOString(), fields:f, legs:state.legs, formLegs:state.formLegs, formHaz:state.formHaz,
-    pickedDate:state.pickedDate, ac:state.ac, grand:c.grand, route:invMeta(c).route, profile:state.profile, wtPxConfirmed:state.wtPxConfirmed };
+    updated:new Date().toISOString(), fields:f, blocks:state.blocks, activeBlockIdx:state.activeBlockIdx, formLegs:state.formLegs, formHaz:state.formHaz,
+    pickedDate:state.pickedDate, ac:state.ac, grand:c.grand, route:invMeta(c).route, wtPxConfirmed:state.wtPxConfirmed };
 }
 function saveCurrent(status){ const j=snapshot(status||((qGet(currentJobId)||{}).status)||"pending"); currentJobId=j.id; qUpsert(j); syncToCloud(); }
 function scheduleSave(){
@@ -639,9 +711,22 @@ function restoreJob(id){
   currentJobId=id;
   for(const k in j.fields){ const el=$(k); if(!el) continue; if(k==="fullDay") el.checked=!!j.fields[k]; else el.value=j.fields[k]??""; }
   $("fullDay").checked=!!j.fields.fullDay;
-  state.legs=j.legs||[]; state.formLegs=j.formLegs||[]; state.formHaz=j.formHaz||[]; state.ac=j.ac||[]; state.pickedDate=j.pickedDate||""; state.profile=j.profile||null; state.wtPxConfirmed=j.wtPxConfirmed||false;
+  // Restore blocks or migrate old legs format
+  if(j.blocks){ 
+    state.blocks=j.blocks; 
+    state.activeBlockIdx=j.activeBlockIdx||0;
+  } else if(j.legs){ 
+    // Migrate old format
+    state.blocks=[{ legs: j.legs||[], profile: j.profile||null, accT: $("accT").value, relT: $("relT").value }];
+    state.activeBlockIdx=0;
+  }
+  state.formLegs=j.formLegs||[]; state.formHaz=j.formHaz||[]; state.ac=j.ac||[]; state.pickedDate=j.pickedDate||""; state.wtPxConfirmed=j.wtPxConfirmed||false;
+  // Update form inputs from active block
+  const ab = activeBlock();
+  $("accT").value = ab.accT || "";
+  $("relT").value = ab.relT || "";
   $("dateRow").style.display="none";
-  renderLegs(); renderAC(); renderFormHint(); render();
+  renderBlockTabs(); renderLegs(); renderAC(); renderFormHint(); render();
   $("msgs").innerHTML=""; msg("Opened: "+(j.fields.orderNo||j.route||"saved flight")+". Drop the Spidertracks CSV when it has flown.", false);
   window.scrollTo({top:0,behavior:"smooth"});
 }
@@ -792,8 +877,11 @@ function routeFile(f){ if(!f) return; if(/\.pdf$/i.test(f.name)) loadPDF(f); els
 ["orderNo","invNo","jobCode","override","unit","pilot","accT","relT","fullDay","wxNote","rFT","rDA","weight","pax"]
   .forEach(id=>$(id).addEventListener("input",()=>{state.wtPxConfirmed=false; render();scheduleSave();}));
 ["btnFirst","btnMidStd","btnMidHvy","btnLast","btnManual"].forEach(id=>{
-  $(id).addEventListener("click",e=>{e.preventDefault(); const prof=e.target.dataset.profile; state.profile=prof; applyProfile(); render(); scheduleSave();});
+  $(id).addEventListener("click",e=>{e.preventDefault(); const prof=e.target.dataset.profile; activeBlock().profile=prof; applyProfile(); render(); scheduleSave();});
 });
+$("accT").addEventListener("input",e=>{activeBlock().accT=e.target.value; state.wtPxConfirmed=false; render(); scheduleSave();});
+$("relT").addEventListener("input",e=>{activeBlock().relT=e.target.value; state.wtPxConfirmed=false; render(); scheduleSave();});
+$("addBlockBtn").onclick=()=>{ addBlock(); renderBlockTabs(); renderLegs(); render(); scheduleSave(); };
 $("confirmWtPx").addEventListener("click",e=>{
   e.preventDefault();
   if(!$("weight").value && !$("pax").value){ msg("Fill in weight and/or passengers first.", true); return; }
