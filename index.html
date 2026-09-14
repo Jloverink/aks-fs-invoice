@@ -468,6 +468,17 @@ function renderBlockTabs(){
     btn.onclick = () => { setActiveBlock(i); renderBlockTabs(); renderLegs(); render(); scheduleSave(); };
     container.appendChild(btn);
   }
+  syncBlockUI();
+}
+function syncBlockUI(){
+  const ab=activeBlock(); if(!ab) return;
+  if($("accT")) $("accT").value=ab.accT||"";
+  if($("relT")) $("relT").value=ab.relT||"";
+  const pm=$("profileMsg");
+  if(pm) pm.innerHTML=(ab.profile && PROFILES[ab.profile]) ? "<b>"+PROFILES[ab.profile].desc+"</b>" : "";
+  for(const id of ["btnFirst","btnMidStd","btnMidHvy","btnLast","btnManual"]){
+    const el=$(id); if(el) el.classList.toggle("gold", el.dataset.profile===ab.profile);
+  }
 }
 function renderLegs(){
   const ab = activeBlock();
@@ -634,9 +645,9 @@ function applyProfile(){
   if(!p||p==="manual"){ msg.innerHTML=""; $("accT").value=""; $("relT").value=""; ab.accT=""; ab.relT=""; return; }
   const prof=PROFILES[p];
   if(!prof) return;
-  const c=compute();
-  if(!c.legRows.length){ msg.innerHTML="<span class=\"warn\">Add flight legs first.</span>"; return; }
-  const sorted=[...c.legRows].sort((a,b)=>toMin(a.out)-toMin(b.out));
+  const legs=ab.legs.filter(l=>l.bill && legMin(l)>0);
+  if(!legs.length){ msg.innerHTML="<span class=\"warn\">Add flight legs to this block first.</span>"; return; }
+  const sorted=[...legs].sort((a,b)=>toMin(a.out)-toMin(b.out));
   const fo=toMin(sorted[0].out), li=toMin(sorted[sorted.length-1].inn);
   if(fo==null || li==null){ msg.innerHTML="<span class=\"warn\">Block times missing.</span>"; return; }
   const fmt=m=>{ m=((m%1440)+1440)%1440; return String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0"); };
