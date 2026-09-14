@@ -163,6 +163,10 @@
       <label>Flight date found in file</label>
       <select id="datePick"></select>
     </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px">
+      <div id="blockTabs" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+      <button class="btn ghost" id="addBlockBtn" type="button" style="padding:6px 12px;font-size:12px">+ Add flight block</button>
+    </div>
     <table class="legs" id="legTbl" style="display:none">
       <thead><tr><th>Bill</th><th>From</th><th>To</th><th>Out</th><th>In</th><th>Min</th></tr></thead>
       <tbody></tbody>
@@ -203,10 +207,6 @@
       <span class="node" id="nAcc">FS clock on</span><span class="seg"></span>
       <span class="node" id="nLegs">Flight legs</span><span class="seg"></span>
       <span class="node" id="nRel">FS clock off</span>
-    </div>
-    <div class="grid2">
-      <div><label>FS clock on (plane committed to their order)</label><input type="time" id="accT"></div>
-      <div><label>FS clock off (released back to us)</label><input type="time" id="relT"></div>
     </div>
     <div class="muted" style="margin-top:6px">Clock ON is not block-out: it starts earlier, when we begin working their order (preflight and loading are paid time). Clock OFF is when the job is done and the plane is ours again.</div>
     <div style="margin-top:8px"><label>Trip profile (the tool will set the pre/post times)</label>
@@ -902,7 +902,8 @@ $("file").addEventListener("change",e=>{ for(const f of e.target.files) routeFil
 $("suggestWin").onclick=()=>{
   const c=compute();
   if(!c.legRows.length){ $("msgs").innerHTML=""; msg("Add flight legs first: the window computes from first block-out and last block-in.", true); return; }
-  const pre=+$("preAllow").value||0, post=+$("postAllow").value||0;
+  const preEl=$("preAllow"), postEl=$("postAllow");
+  const pre=preEl?(+preEl.value||0):0, post=postEl?(+postEl.value||0):0;
   if(!pre&&!post){ $("msgs").innerHTML=""; msg("Pick pre and post allowances from the standard schedule first.", true); return; }
   const sorted=[...c.legRows].sort((a,b)=>toMin(a.out)-toMin(b.out));
   const fo=toMin(sorted[0].out), li=toMin(sorted[sorted.length-1].inn);
