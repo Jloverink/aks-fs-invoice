@@ -472,8 +472,8 @@ function renderBlockTabs(){
 }
 function syncBlockUI(){
   const ab=activeBlock(); if(!ab) return;
-  if($("accT")) $("accT").value=ab.accT||"";
-  if($("relT")) $("relT").value=ab.relT||"";
+  if($("accT") && document.activeElement!==$("accT")) $("accT").value=ab.accT||"";
+  if($("relT") && document.activeElement!==$("relT")) $("relT").value=ab.relT||"";
   const pm=$("profileMsg");
   if(pm) pm.innerHTML=(ab.profile && PROFILES[ab.profile]) ? "<b>"+PROFILES[ab.profile].desc+"</b>" : "";
   for(const id of ["btnFirst","btnMidStd","btnMidHvy","btnLast","btnManual"]){
@@ -946,7 +946,7 @@ function renderFormHint(){
 function routeFile(f){ if(!f) return; if(/\.pdf$/i.test(f.name)) loadPDF(f); else f.text().then(loadCSV); }
 
 /* ---------- wiring ---------- */
-["orderNo","invNo","jobCode","override","unit","pilot","accT","relT","fullDay","wxNote","rFT","rDA","weight","pax"]
+["orderNo","invNo","jobCode","override","unit","pilot","fullDay","wxNote","rFT","rDA","weight","pax"]
   .forEach(id=>$(id).addEventListener("input",()=>{state.wtPxConfirmed=false; render();scheduleSave();}));
 ["btnFirst","btnMidStd","btnMidHvy","btnLast","btnManual"].forEach(id=>{
   $(id).addEventListener("click",e=>{e.preventDefault(); const prof=e.target.dataset.profile; activeBlock().profile=prof; applyProfile(); render(); scheduleSave();});
@@ -981,7 +981,8 @@ $("suggestWin").onclick=()=>{
   const fo=toMin(sorted[0].out), li=toMin(sorted[sorted.length-1].inn);
   const fmt=m=>{ m=((m%1440)+1440)%1440; return String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0"); };
   $("accT").value=fmt(fo-pre); $("relT").value=fmt(li+post);
-  render();
+  const ab=activeBlock(); ab.accT=$("accT").value; ab.relT=$("relT").value;
+  render(); scheduleSave();
 };
 window.addEventListener("beforeprint",()=>{ document.body.appendChild($("invoice")); document.body.classList.add("printing"); });
 window.addEventListener("afterprint",()=>{ $("invoiceWrap").appendChild($("invoice")); document.body.classList.remove("printing"); });
